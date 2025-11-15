@@ -63,6 +63,70 @@
         padding: 0 clamp(1.5rem, 5vw, 3rem) 3rem;
       }
 
+      .add-game {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: clamp(1rem, 4vw, 1.6rem);
+        margin-bottom: 2rem;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      }
+
+      .add-game h2 {
+        margin: 0 0 0.4rem;
+      }
+
+      .add-game p {
+        margin: 0 0 1rem;
+        color: var(--text-muted);
+      }
+
+      .add-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+
+      .form-group {
+        flex: 1 1 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .form-group label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+
+      .form-group input,
+      .form-group textarea {
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        padding: 0.6rem 0.8rem;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 44px;
+      }
+
+      .form-group textarea {
+        min-height: 80px;
+      }
+
+      .add-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+      }
+
+      .add-status {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -220,11 +284,37 @@
     </header>
 
     <main>
+      <section class="add-game" aria-label="新增自定义游戏">
+        <h2>自定义游戏</h2>
+        <p>填写标题、简介、标签与 HTML 路径（可为完整 URL），即可把个人游戏加入列表，仅在当前浏览器保存。</p>
+        <form class="add-form" id="add-game-form">
+          <div class="form-group">
+            <label for="game-title">游戏标题 *</label>
+            <input id="game-title" type="text" required placeholder="例如：My Puzzle" />
+          </div>
+          <div class="form-group">
+            <label for="game-file">文件 / URL *</label>
+            <input id="game-file" type="text" required placeholder="typing-game.html 或 https://..." />
+          </div>
+          <div class="form-group">
+            <label for="game-tags">标签（逗号分隔，可选）</label>
+            <input id="game-tags" type="text" placeholder="挑战, 益智" />
+          </div>
+          <div class="form-group" style="flex-basis:100%">
+            <label for="game-desc">简介（可选）</label>
+            <textarea id="game-desc" placeholder="一句话描述玩法"></textarea>
+          </div>
+          <div class="add-actions">
+            <button type="submit" style="flex:0 0 auto; padding-inline:1.4rem">加入列表</button>
+            <span class="add-status" id="add-status">数据仅保存于本地浏览器。</span>
+          </div>
+        </form>
+      </section>
       <div class="grid" id="grid"></div>
     </main>
 
     <script>
-      const games = [
+      const baseGames = [
         {
           id: "jumping-ball-runner",
           title: "Jumping Ball Runner",
@@ -269,6 +359,9 @@
         },
       ];
 
+      const STORAGE_KEY = "mini-arcade-custom-games";
+      let customGames = [];
+
       const grid = document.getElementById("grid");
       const searchInput = document.getElementById("search");
       const playerOverlay = document.getElementById("player");
@@ -277,41 +370,90 @@
       const playerInfo = document.getElementById("player-info");
       const playerStatus = document.getElementById("player-status");
       const closePlayerBtn = document.getElementById("close-player");
+      const addGameForm = document.getElementById("add-game-form");
+      const addStatus = document.getElementById("add-status");
+      const titleInput = document.getElementById("game-title");
+      const fileInput = document.getElementById("game-file");
+      const tagsInput = document.getElementById("game-tags");
+      const descInput = document.getElementById("game-desc");
+
+      const getAllGames = () => [...baseGames, ...customGames];
+
+      const loadCustomGames = () => {
+        try {
+          const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          if (Array.isArray(stored)) {
+            customGames = stored;
+          }
+        } catch (err) {
+          console.warn("无法读取自定义游戏", err);
+          customGames = [];
+        }
+      };
+
+      const persistCustomGames = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(customGames));
+      };
 
       function createCard(game) {
         const card = document.createElement("article");
         card.className = "card";
-        card.innerHTML = `
-          <div>
-            <h2>${game.title}</h2>
-            <p style="color: var(--text-muted); margin:0">${game.description}</p>
-          </div>
-          <div class="meta">
-            ${game.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
-          </div>
-          <div class="actions">
-            <button data-action="play">运行</button>
-            <button class="secondary" data-action="open">新标签</button>
-          </div>
-        `;
-        card.querySelector("[data-action=play]").addEventListener("click", () => openPlayer(game));
-        card.querySelector("[data-action=open]").addEventListener("click", () => {
+        const header = document.createElement("div");
+        const titleEl = document.createElement("h2");
+        titleEl.textContent = game.title;
+        const descEl = document.createElement("p");
+        descEl.style.margin = "0";
+        descEl.style.color = "var(--text-muted)";
+        descEl.textContent = game.description || "暂无简介";
+        header.append(titleEl, descEl);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const displayTags = [...(game.tags || [])];
+        if (game.custom) displayTags.push("自定义");
+        displayTags.forEach((tag) => {
+          const span = document.createElement("span");
+          span.className = "tag";
+          span.textContent = tag;
+          meta.appendChild(span);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const playBtn = document.createElement("button");
+        playBtn.textContent = "运行";
+        playBtn.addEventListener("click", () => openPlayer(game));
+        const openBtn = document.createElement("button");
+        openBtn.className = "secondary";
+        openBtn.textContent = "新标签";
+        openBtn.addEventListener("click", () => {
           window.open(game.file, "_blank", "noopener");
         });
+        actions.append(playBtn, openBtn);
+
+        card.append(header);
+        if (displayTags.length) {
+          card.append(meta);
+        }
+        card.append(actions);
         return card;
       }
 
       function renderGrid(keyword = "") {
         const term = keyword.trim().toLowerCase();
+        const catalog = getAllGames();
         const list = term
-          ? games.filter((game) => {
+          ? catalog.filter((game) => {
+              const desc = (game.description || "").toLowerCase();
+              const title = (game.title || "").toLowerCase();
+              const tags = (game.tags || []).map((tag) => tag.toLowerCase());
               return (
-                game.title.toLowerCase().includes(term) ||
-                game.description.toLowerCase().includes(term) ||
-                game.tags.some((tag) => tag.toLowerCase().includes(term))
+                title.includes(term) ||
+                desc.includes(term) ||
+                tags.some((tag) => tag.includes(term))
               );
             })
-          : games;
+          : catalog;
 
         grid.innerHTML = "";
         if (!list.length) {
@@ -326,7 +468,10 @@
 
       function openPlayer(game) {
         playerTitle.textContent = game.title;
-        playerInfo.textContent = `${game.tags.join(" · ")} · ${game.file}`;
+        const tagList = game.tags && game.tags.length ? [...game.tags] : [];
+        if (game.custom) tagList.push("自定义");
+        const tagInfo = tagList.length ? tagList.join(" · ") : "街机合集";
+        playerInfo.textContent = `${tagInfo} · ${game.file}`;
         playerStatus.textContent = "正在加载...";
         playerFrame.src = game.file;
         playerFrame.onload = () => (playerStatus.textContent = "加载完成，祝你玩得开心！");
@@ -338,12 +483,56 @@
         playerOverlay.classList.remove("active");
       }
 
+      function normalizeTags(value) {
+        return value
+          .split(/[,，]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+      }
+
+      function showStatus(message, isError = false) {
+        addStatus.textContent = message;
+        addStatus.style.color = isError ? "#fbbf24" : "var(--text-muted)";
+        if (!isError) {
+          setTimeout(() => {
+            addStatus.textContent = "数据仅保存于本地浏览器。";
+            addStatus.style.color = "var(--text-muted)";
+          }, 3000);
+        }
+      }
+
+      addGameForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const title = titleInput.value.trim();
+        const file = fileInput.value.trim();
+        if (!title || !file) {
+          showStatus("标题和文件为必填项。", true);
+          return;
+        }
+        const description = descInput.value.trim();
+        const tags = normalizeTags(tagsInput.value || "");
+        const newGame = {
+          id: `custom-${Date.now()}`,
+          title,
+          description,
+          tags,
+          file,
+          custom: true,
+        };
+        customGames.push(newGame);
+        persistCustomGames();
+        renderGrid(searchInput.value);
+        addGameForm.reset();
+        showStatus("已添加到列表，刷新仍会保留。");
+      });
+
       searchInput.addEventListener("input", (e) => renderGrid(e.target.value));
       closePlayerBtn.addEventListener("click", closePlayer);
       playerOverlay.addEventListener("click", (e) => {
         if (e.target === playerOverlay) closePlayer();
       });
 
+      loadCustomGames();
       renderGrid();
     </script>
   </body>
