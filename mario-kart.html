@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mario Kart - Mini Dash</title>
+  <style>
+    :root {
+      font-family: "Baloo 2", "Segoe UI", system-ui, sans-serif;
+      --cyan: #3cf2ff;
+      --pink: #ff50a6;
+      --yellow: #ffdf3b;
+      --green: #4ef073;
+      --purple: #a975ff;
+      --bg: radial-gradient(circle at top, #ffe29f, #ffa99f 45%, #ff719a 80%);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1b0233;
+      padding: 1rem;
+    }
+
+    .game-shell {
+      width: min(1200px, 100%);
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 28px;
+      padding: 1.5rem;
+      box-shadow: 0 25px 60px rgba(169, 117, 255, 0.35);
+      border: 3px solid rgba(255, 255, 255, 0.6);
+    }
+
+    header.hud {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      margin-bottom: 1rem;
+    }
+
+    .stat {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+      border-radius: 18px;
+      padding: 0.85rem 1.1rem;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+    }
+
+    .stat span {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #7a3ca5;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.5rem;
+      color: #fa149a;
+      text-shadow: 0 1px 0 white;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 3fr) minmax(260px, 1fr);
+      gap: 1.5rem;
+    }
+
+    .track-wrapper {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #2a0e5c 0%, #1d014a 70%);
+      min-height: 520px;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .track {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: min(440px, 90%);
+      height: 520px;
+      background: linear-gradient(180deg, #2c2e9d 0%, #2a1444 100%);
+      border-radius: 40px;
+      border: 6px solid rgba(255, 255, 255, 0.2);
+      transform: perspective(900px) rotateX(50deg);
+      transform-origin: top center;
+      overflow: hidden;
+    }
+
+    .track::before,
+    .track::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-size: 12px 70px;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .track::before {
+      background-image: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.6),
+        rgba(255, 255, 255, 0.6) 16px,
+        rgba(255, 255, 255, 0) 16px,
+        rgba(255, 255, 255, 0) 70px
+      );
+      width: 7px;
+      left: calc(50% - 3.5px);
+      margin: 0 auto;
+    }
+
+    .track::after {
+      background-image: radial-gradient(circle, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mix-blend-mode: screen;
+    }
+
+    .player-kart {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      width: 100px;
+      height: 150px;
+      --lane-shift: 0px;
+      transform: translateX(calc(-50% + var(--lane-shift))) translateZ(35px);
+      transition: transform 0.25s ease;
+      filter: drop-shadow(0 20px 16px rgba(0, 0, 0, 0.35));
+      animation: hop 1.2s ease-in-out infinite;
+    }
+
+    .player-body {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(160deg, #ff4b80, #ff7554);
+      border-radius: 48% 48% 38% 38%;
+      border: 6px solid #fff0f0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .player-body::before,
+    .player-body::after {
+      content: "";
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+    }
+
+    .player-body::before {
+      width: 32px;
+      height: 32px;
+      top: 32px;
+      left: 18px;
+      box-shadow: 32px 0 0 0 white;
+    }
+
+    .player-body::after {
+      width: 18px;
+      height: 12px;
+      top: 70px;
+      left: 32px;
+      background: #1c0d44;
+      box-shadow: 20px 0 0 0 #1c0d44;
+    }
+
+    .player-hat {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      width: 85px;
+      height: 45px;
+      transform: translateX(-50%);
+      background: radial-gradient(circle at 20% 70%, #fffde6, #ffd26a);
+      border-radius: 40px 40px 10px 10px;
+      border: 5px solid #fff6c3;
+    }
+
+    .player-hat::after {
+      content: "M";
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-weight: 700;
+      color: #d31737;
+      font-size: 1.4rem;
+      text-shadow: 0 1px 0 white;
+    }
+
+    .kart-shadow {
+      position: absolute;
+      inset: auto 0 10px;
+      margin: auto;
+      width: 110px;
+      height: 30px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 0, 0, 0.35), transparent 75%);
+      filter: blur(6px);
+    }
+
+    .track-object {
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      left: 50%;
+      transform: translate(-50%, -50%) translateZ(30px);
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1f0348;
+      font-size: 2.3rem;
+    }
+
+    .track-object.hazard {
+      background: linear-gradient(135deg, #ffec85, #ff9b2f);
+      border: 6px solid #fff6d3;
+      border-radius: 50% 60% 45% 55%;
+      box-shadow: 0 12px 20px rgba(255, 115, 38, 0.35);
+    }
+
+    .track-object.hazard::after {
+      content: '';
+      position: absolute;
+      width: 56px;
+      height: 10px;
+      background: #8a2800;
+      border-radius: 50%;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .track-object.boost {
+      background: linear-gradient(150deg, #abff8f, #5ff0ff);
+      border: 5px solid white;
+      border-radius: 20px;
+      width: 90px;
+      height: 65px;
+      font-size: 2rem;
+      box-shadow: 0 12px 25px rgba(94, 255, 224, 0.45);
+    }
+
+    .track-object.boost span {
+      animation: spin 1.2s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(1turn);
+      }
+    }
+
+    @keyframes hop {
+      0%,
+      100% {
+        transform: translateX(calc(-50% + var(--lane-shift))) translateZ(35px) translateY(0);
+      }
+      50% {
+        transform: translateX(calc(-50% + var(--lane-shift))) translateZ(35px) translateY(-8px);
+      }
+    }
+
+    .info-panel {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+      border-radius: 24px;
+      padding: 1.2rem;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      color: #3b0d61;
+    }
+
+    .info-panel h2 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    .goal {
+      background: #260040;
+      color: white;
+      padding: 0.9rem 1rem;
+      border-radius: 18px;
+      box-shadow: 0 12px 25px rgba(38, 0, 64, 0.35);
+    }
+
+    .progress-shell {
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 999px;
+      height: 16px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      width: 0%;
+      transition: width 0.1s;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .controls button {
+      flex: 1;
+      border: none;
+      padding: 0.8rem;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffe8f8, #ffd2f4);
+      color: #8d1172;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .controls button:active {
+      transform: translateY(2px);
+    }
+
+    .start-banner,
+    .finish-banner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 0, 31, 0.75);
+      color: white;
+      text-align: center;
+      gap: 1rem;
+      padding: 1rem;
+      z-index: 3;
+    }
+
+    .start-banner button,
+    .finish-banner button,
+    #retryBtn {
+      border: none;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.9rem 1.6rem;
+      border-radius: 30px;
+      background: linear-gradient(135deg, #ff7be5, #ffa75f);
+      color: #220032;
+      cursor: pointer;
+      box-shadow: 0 15px 25px rgba(199, 52, 166, 0.4);
+    }
+
+    .start-banner button:hover,
+    .finish-banner button:hover,
+    #retryBtn:hover {
+      filter: brightness(1.05);
+    }
+
+    #retryBtn {
+      margin-top: 1.5rem;
+      width: 100%;
+    }
+
+    .spectators {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .spectator {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 0.4rem 0.7rem;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      font-size: 1.1rem;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 25px;
+      transform: translateX(-50%) translateY(30px);
+      background: #ffe03b;
+      color: #5a0068;
+      padding: 0.6rem 1.3rem;
+      border-radius: 999px;
+      font-weight: 700;
+      opacity: 0;
+      transition: 0.35s;
+      box-shadow: 0 15px 30px rgba(255, 218, 49, 0.35);
+      pointer-events: none;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .track {
+        transform: perspective(700px) rotateX(52deg);
+      }
+
+      .player-kart {
+        bottom: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell">
+    <header class="hud">
+      <div class="stat">
+        <span>Speed</span>
+        <strong id="speedDisplay">0 km/h</strong>
+      </div>
+      <div class="stat">
+        <span>Timer</span>
+        <strong id="timerDisplay">0.00 s</strong>
+      </div>
+      <div class="stat">
+        <span>High Score</span>
+        <strong id="bestDisplay">--</strong>
+      </div>
+    </header>
+
+    <main>
+      <div class="track-wrapper">
+        <div class="start-banner" id="startBanner">
+          <h1>Mario Kart</h1>
+          <p>Reach the finish line fast! Dodge banana peels, hit the boost mushrooms, and keep your speed climbing.</p>
+          <button id="startBtn">Start the Dash</button>
+        </div>
+        <div class="track" id="track">
+          <div class="player-kart" id="playerKart">
+            <div class="player-hat"></div>
+            <div class="player-body"></div>
+            <div class="kart-shadow"></div>
+          </div>
+        </div>
+        <div class="toast" id="toast">Boost!</div>
+      </div>
+
+      <section class="info-panel">
+        <h2>Race Briefing</h2>
+        <div class="goal">
+          <strong>Goal:</strong>
+          <p>Reach the destination as quickly as possible. Every run gets faster, so chase that new best time!</p>
+          <div class="progress-shell">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+        <div>
+          <p>Controls: Arrow keys / A &amp; D. On touch screens, tap the buttons below.</p>
+          <div class="controls">
+            <button data-dir="left">⟵ Drift Left</button>
+            <button data-dir="right">Drift Right ⟶</button>
+          </div>
+        </div>
+        <div>
+          <h3>Spectator Stand</h3>
+          <div class="spectators">
+            <div class="spectator">🎉 Go Speedster!</div>
+            <div class="spectator">🍄 Grab boosts!</div>
+            <div class="spectator">🍌 Watch the peels!</div>
+            <div class="spectator">🏁 Finish strong!</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <button id="retryBtn">Retry Race</button>
+  </div>
+
+  <script>
+    (function () {
+      const lanes = [-120, 0, 120];
+      const playerEl = document.getElementById('playerKart');
+      const trackEl = document.getElementById('track');
+      const progressFill = document.getElementById('progressFill');
+      const speedDisplay = document.getElementById('speedDisplay');
+      const timerDisplay = document.getElementById('timerDisplay');
+      const bestDisplay = document.getElementById('bestDisplay');
+      const startBanner = document.getElementById('startBanner');
+      const retryBtn = document.getElementById('retryBtn');
+      const toastEl = document.getElementById('toast');
+      const controls = document.querySelectorAll('.controls button');
+
+      const CONFIG = {
+        baseSpeed: 110,
+        maxSpeed: 400,
+        acceleration: 25,
+        hazardSpawn: 1.05,
+        boostSpawn: 2.2,
+        trackLength: 4400,
+        collisionDistance: 65,
+      };
+
+      let laneIndex = 1;
+      let speed = CONFIG.baseSpeed;
+      let distance = 0;
+      let elapsed = 0;
+      let lastFrame = null;
+      let hazardTimer = 0;
+      let boostTimer = 0;
+      let gameState = 'idle';
+      let hazards = [];
+      let boosts = [];
+      let audioCtx = null;
+      let audioEnabled = false;
+      let bestTime = parseFloat(localStorage.getItem('marioKartBestTime')) || null;
+      let trackMetrics = { width: trackEl.clientWidth || 440, height: trackEl.clientHeight || 520 };
+
+      const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+      const hudState = { speed: '', timer: '', progress: -1, timerTick: 0 };
+
+      const updateTrackMetrics = () => {
+        const rect = trackEl.getBoundingClientRect();
+        trackMetrics = {
+          width: rect.width || trackMetrics.width,
+          height: rect.height || trackMetrics.height,
+        };
+      };
+
+      window.addEventListener('resize', updateTrackMetrics);
+      updateTrackMetrics();
+
+      function updateBestDisplay() {
+        bestDisplay.textContent = bestTime ? bestTime.toFixed(2) + ' s' : 'Run to set!';
+      }
+
+      updateBestDisplay();
+
+      function unlockAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        audioEnabled = true;
+      }
+
+      ['pointerdown', 'keydown', 'touchstart'].forEach((evt) => {
+        window.addEventListener(
+          evt,
+          () => {
+            unlockAudio();
+          },
+          { once: true }
+        );
+      });
+
+      const soundRecipes = {
+        start: [
+          { type: 'square', freq: 520, dur: 0.12 },
+          { type: 'square', freq: 660, dur: 0.12 },
+          { type: 'square', freq: 780, dur: 0.2 },
+        ],
+        boost: [
+          { type: 'sawtooth', freq: 340, dur: 0.08 },
+          { type: 'triangle', freq: 620, dur: 0.16 },
+        ],
+        bonk: [
+          { type: 'triangle', freq: 180, dur: 0.18 },
+          { type: 'square', freq: 120, dur: 0.1 },
+        ],
+        finish: [
+          { type: 'triangle', freq: 660, dur: 0.2 },
+          { type: 'sine', freq: 880, dur: 0.25 },
+          { type: 'triangle', freq: 990, dur: 0.18 },
+        ],
+        drift: [{ type: 'sawtooth', freq: 430, dur: 0.06 }],
+      };
+
+      function playSound(name) {
+        if (!audioEnabled || !audioCtx) return;
+        const now = audioCtx.currentTime + 0.01;
+        const recipe = soundRecipes[name] || [];
+        let offset = 0;
+        recipe.forEach((step) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = step.type;
+          osc.frequency.setValueAtTime(step.freq, now + offset);
+          gain.gain.setValueAtTime(0.2, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + step.dur);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + step.dur);
+          offset += step.dur * 0.6;
+        });
+      }
+
+      function showToast(text) {
+        toastEl.textContent = text;
+        toastEl.classList.add('visible');
+        setTimeout(() => toastEl.classList.remove('visible'), 900);
+      }
+
+      function setLane(index) {
+        const newIndex = clamp(index, 0, lanes.length - 1);
+        if (newIndex === laneIndex) return;
+        laneIndex = newIndex;
+        playerEl.style.setProperty('--lane-shift', `${lanes[laneIndex]}px`);
+        playSound('drift');
+      }
+
+      function applyLaneTransform() {
+        playerEl.style.setProperty('--lane-shift', `${lanes[laneIndex]}px`);
+      }
+
+      applyLaneTransform();
+
+      function createObject(type) {
+        const el = document.createElement('div');
+        el.className = `track-object ${type}`;
+        el.innerHTML = type === 'boost' ? '<span>🍄</span>' : '🍌';
+        trackEl.appendChild(el);
+        const height = el.offsetHeight || (type === 'boost' ? 65 : 90);
+        return { el, height };
+      }
+
+      function spawnHazard() {
+        const { el, height } = createObject('hazard');
+        const hazard = {
+          lane: Math.floor(Math.random() * lanes.length),
+          y: -80,
+          height,
+          el,
+        };
+        hazards.push(hazard);
+      }
+
+      function spawnBoost() {
+        const { el, height } = createObject('boost');
+        const boost = {
+          lane: Math.floor(Math.random() * lanes.length),
+          y: -80,
+          height,
+          el,
+        };
+        boosts.push(boost);
+      }
+
+      function moveObjects(collection, speedFactor) {
+        const width = trackMetrics.width || trackEl.clientWidth || 440;
+        const height = trackMetrics.height || trackEl.clientHeight || 520;
+        const centerX = width / 2;
+        return collection.filter((obj) => {
+          obj.y += speedFactor;
+          obj.el.style.left = `${centerX + lanes[obj.lane]}px`;
+          obj.el.style.top = `${obj.y}px`;
+          if (obj.y > height + 100) {
+            obj.el.remove();
+            return false;
+          }
+          return true;
+        });
+      }
+
+      function detectCollisions(collection, onHit) {
+        const trackHeight = trackMetrics.height || trackEl.clientHeight || 520;
+        const playerCenter = trackHeight - 32 - 75; // bottom offset + half kart height
+        collection.forEach((obj, index) => {
+          if (obj.lane !== laneIndex) return;
+          const objectCenter = obj.y + obj.height / 2;
+          if (Math.abs(objectCenter - playerCenter) < CONFIG.collisionDistance) {
+            onHit(obj, index);
+          }
+        });
+      }
+
+      function updateHUD(frameTime = performance.now()) {
+        const speedText = `${Math.round(speed)} km/h`;
+        if (hudState.speed !== speedText) {
+          hudState.speed = speedText;
+          speedDisplay.textContent = speedText;
+        }
+
+        if (frameTime - hudState.timerTick > 60 || !hudState.timer) {
+          hudState.timer = `${elapsed.toFixed(2)} s`;
+          hudState.timerTick = frameTime;
+          timerDisplay.textContent = hudState.timer;
+        }
+
+        const progress = clamp(distance / CONFIG.trackLength, 0, 1);
+        const roundedProgress = Math.round(progress * 1000) / 1000;
+        if (Math.abs(roundedProgress - hudState.progress) > 0.0005) {
+          hudState.progress = roundedProgress;
+          progressFill.style.width = `${roundedProgress * 100}%`;
+        }
+      }
+
+      function resetRun() {
+        hazards.forEach((h) => h.el.remove());
+        boosts.forEach((b) => b.el.remove());
+        hazards = [];
+        boosts = [];
+        laneIndex = 1;
+        applyLaneTransform();
+        speed = CONFIG.baseSpeed;
+        distance = 0;
+        elapsed = 0;
+        hazardTimer = 0;
+        boostTimer = 0;
+        lastFrame = null;
+        gameState = 'ready';
+        updateHUD();
+        startBanner.style.display = 'flex';
+        startBanner.innerHTML = `
+          <h1>Ready?</h1>
+          <p>Press start when you hear the crowd cheer!</p>
+          <button id="startBtnInner">Start the Dash</button>
+        `;
+        const btn = document.getElementById('startBtnInner');
+        btn?.addEventListener('click', startGame);
+      }
+
+      function startGame() {
+        if (gameState === 'running') return;
+        startBanner.style.display = 'none';
+        gameState = 'running';
+        playSound('start');
+        lastFrame = performance.now();
+        requestAnimationFrame(loop);
+      }
+
+      function finishRace() {
+        gameState = 'finished';
+        playSound('finish');
+        const finalTime = elapsed;
+        showToast('🏁 Finish!');
+        if (!bestTime || finalTime < bestTime) {
+          bestTime = finalTime;
+          localStorage.setItem('marioKartBestTime', finalTime.toFixed(2));
+          updateBestDisplay();
+          showToast('🎉 New Record!');
+        }
+        startBanner.style.display = 'flex';
+        startBanner.innerHTML = `
+          <div class="finish-banner">
+            <h2>Victory Lap!</h2>
+            <p>You finished in <strong>${finalTime.toFixed(2)} s</strong></p>
+            <button id="runAgain">Go Again</button>
+          </div>
+        `;
+        document.getElementById('runAgain').addEventListener('click', resetRun);
+      }
+
+      function loop(now) {
+        if (gameState !== 'running') return;
+        const delta = (now - lastFrame) / 1000;
+        lastFrame = now;
+        elapsed += delta;
+        distance += speed * delta;
+        speed = clamp(speed + CONFIG.acceleration * delta, CONFIG.baseSpeed, CONFIG.maxSpeed);
+
+        hazardTimer += delta;
+        boostTimer += delta;
+        if (hazardTimer > CONFIG.hazardSpawn) {
+          spawnHazard();
+          hazardTimer = 0;
+        }
+        if (boostTimer > CONFIG.boostSpawn) {
+          spawnBoost();
+          boostTimer = 0;
+        }
+
+        const moveAmount = (speed * delta) * 0.45 + 2;
+        hazards = moveObjects(hazards, moveAmount);
+        boosts = moveObjects(boosts, moveAmount);
+
+        detectCollisions(hazards, (hazard, index) => {
+          hazard.el.classList.add('hit');
+          playSound('bonk');
+          showToast('🍌 Slipped!');
+          speed = Math.max(CONFIG.baseSpeed, speed * 0.7);
+          hazard.el.remove();
+          hazards.splice(index, 1);
+        });
+
+        detectCollisions(boosts, (boost, index) => {
+          playSound('boost');
+          showToast('🍄 Boost!');
+          speed = clamp(speed + 60, CONFIG.baseSpeed, CONFIG.maxSpeed + 40);
+          boost.el.remove();
+          boosts.splice(index, 1);
+        });
+
+        updateHUD(now);
+
+        if (distance >= CONFIG.trackLength) {
+          finishRace();
+          return;
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      retryBtn.addEventListener('click', () => {
+        playSound('bonk');
+        showToast('Race reset!');
+        resetRun();
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (gameState === 'idle') return;
+        const key = event.key.toLowerCase();
+        let handled = false;
+        if (key === 'arrowleft' || key === 'a') {
+          setLane(laneIndex - 1);
+          handled = true;
+        }
+        if (key === 'arrowright' || key === 'd') {
+          setLane(laneIndex + 1);
+          handled = true;
+        }
+        if (key === 'r') {
+          resetRun();
+          handled = true;
+        }
+        if (handled) {
+          event.preventDefault();
+        }
+      });
+
+      controls.forEach((button) => {
+        button.addEventListener('click', () => {
+          const dir = button.dataset.dir === 'left' ? -1 : 1;
+          setLane(laneIndex + dir);
+        });
+      });
+
+      resetRun();
+    })();
+  </script>
+</body>
+</html>

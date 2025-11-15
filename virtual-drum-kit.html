@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Virtual Drum Kit • Studio Mode</title>
+    <style>
+      :root {
+        --bg: #05060a;
+        --shell: rgba(10, 13, 30, 0.85);
+        --panel: rgba(15, 20, 45, 0.9);
+        --accent: #ff9f1c;
+        --accent-2: #35ffe3;
+        --text: #fefefe;
+        --muted: #a6b3d3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+          sans-serif;
+        background: radial-gradient(circle at top, #0c1130, #04050c 65%);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        padding: clamp(1.5rem, 3vw, 3rem);
+      }
+
+      button {
+        font-family: inherit;
+        border: none;
+        cursor: pointer;
+        padding: 0.8rem 1.6rem;
+        border-radius: 999px;
+        font-size: 1rem;
+        color: #031926;
+        background: linear-gradient(130deg, var(--accent), var(--accent-2));
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      button:not(:disabled):active {
+        transform: scale(0.96);
+      }
+
+      .shell {
+        width: min(1200px, 96vw);
+        background: var(--shell);
+        border-radius: 32px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: clamp(1.5rem, 5vw, 3rem);
+        box-shadow: 0 30px 80px rgba(2, 4, 22, 0.8);
+        backdrop-filter: blur(18px);
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        letter-spacing: 0.05em;
+      }
+
+      header p {
+        margin: 0.2rem 0 0;
+        color: var(--muted);
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+      }
+
+      .studio-light {
+        width: 220px;
+        height: 80px;
+        border-radius: 999px;
+        background: linear-gradient(130deg, rgba(226, 38, 117, 0.22), rgba(64, 200, 255, 0.25));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .pad-grid {
+        margin-top: 2rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+      }
+
+      .pad {
+        position: relative;
+        background: var(--panel);
+        border-radius: 22px;
+        padding: 1.5rem;
+        min-height: 150px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .pad::after {
+        content: "";
+        position: absolute;
+        inset: 6px;
+        border-radius: 18px;
+        border: 1px dashed rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+      }
+
+      .pad.active {
+        transform: translateY(4px) scale(0.98);
+        border-color: var(--accent);
+        box-shadow: 0 20px 35px rgba(0, 0, 0, 0.6);
+      }
+
+      .pad-key {
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: var(--accent-2);
+      }
+
+      .pad-label {
+        margin-top: 0.5rem;
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .pad-desc {
+        margin-top: 0.25rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .panel {
+        margin-top: 2.2rem;
+        background: var(--panel);
+        border-radius: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 1.6rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .panel blockquote {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .status {
+        font-size: 0.95rem;
+        color: var(--accent-2);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+
+      .ghost-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: var(--text);
+        box-shadow: none;
+      }
+
+      .tape {
+        margin-top: 1.5rem;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 18px;
+        padding: 1rem 1.4rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        max-height: 220px;
+        overflow-y: auto;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 0.9rem;
+      }
+
+      .tape-empty {
+        color: var(--muted);
+      }
+
+      .timeline-item {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0.45rem 0;
+      }
+
+      .timeline-item:last-child {
+        border-bottom: none;
+      }
+
+      footer {
+        margin-top: 2rem;
+        text-align: center;
+        color: var(--muted);
+        letter-spacing: 0.15em;
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div>
+          <h1>Virtual Drum Kit</h1>
+          <p>studio control • click or keys to groove</p>
+        </div>
+      </header>
+
+      <section class="pad-grid" id="pad-grid"></section>
+
+      <section class="panel">
+        <div>
+          <h3 style="margin-top: 0; margin-bottom: 0.4rem; letter-spacing: 0.2em; font-size: 0.9rem">
+            Recording Suite
+          </h3>
+          <div class="status" id="status">ready to rock</div>
+          <blockquote>
+            Hit <strong>Start Recording</strong>, play your pattern, then use <strong>Playback</strong>
+            to hear it loop. Keyboard shortcuts mirror the pad labels (QWER / ASDF / ZXCV).
+          </blockquote>
+        </div>
+        <div class="controls">
+          <button id="record-btn">Start Recording</button>
+          <button class="ghost-btn" id="stop-btn">Stop</button>
+          <button class="ghost-btn" id="play-btn">Playback</button>
+          <button class="ghost-btn" id="clear-btn">Clear Tape</button>
+        </div>
+      </section>
+
+      <section class="tape" id="tape">
+        <div class="tape-empty">No takes yet. Record a groove to fill this reel.</div>
+      </section>
+
+      <footer>High fidelity pads • responsive sounds • inspired by neon control rooms</footer>
+    </div>
+
+    <script>
+      (() => {
+        const doc = document;
+        const padGrid = doc.getElementById("pad-grid");
+        const statusEl = doc.getElementById("status");
+        const tapeEl = doc.getElementById("tape");
+        const recordBtn = doc.getElementById("record-btn");
+        const stopBtn = doc.getElementById("stop-btn");
+        const playBtn = doc.getElementById("play-btn");
+        const clearBtn = doc.getElementById("clear-btn");
+        let statusCache = statusEl.textContent || "";
+
+        const padConfig = [
+          { key: "Q", label: "Kick", hint: "Deep boom", type: "kick" },
+          { key: "W", label: "Snare", hint: "Sharp crack", type: "snare" },
+          { key: "E", label: "Hi-Hat", hint: "Tight tick", type: "hihat" },
+          { key: "R", label: "Clap", hint: "Wide slap", type: "clap" },
+          { key: "A", label: "Low Tom", hint: "Warm shell", type: "tom-low" },
+          { key: "S", label: "Mid Tom", hint: "Punch tone", type: "tom-mid" },
+          { key: "D", label: "High Tom", hint: "Snappy tom", type: "tom-high" },
+          { key: "F", label: "Ride", hint: "Gloss ping", type: "ride" },
+          { key: "Z", label: "Crash", hint: "Bright wash", type: "crash" },
+          { key: "X", label: "Perc", hint: "Click pulse", type: "perc" },
+          { key: "C", label: "Shaker", hint: "Rustle", type: "shaker" },
+          { key: "V", label: "808", hint: "Sub drop", type: "sub" },
+        ];
+
+        const state = {
+          audioCtx: null,
+          noiseBuffer: null,
+          pads: new Map(),
+          isRecording: false,
+          isPlaying: false,
+          recording: [],
+          playbackTimers: [],
+          recordStart: 0,
+        };
+
+        function ensureAudioContext() {
+          if (!state.audioCtx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            state.audioCtx = new AudioCtx();
+          }
+          if (state.audioCtx.state === "suspended") {
+            state.audioCtx.resume();
+          }
+          return state.audioCtx;
+        }
+
+        function createNoiseBuffer() {
+          const ctx = ensureAudioContext();
+          const buffer = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+          state.noiseBuffer = buffer;
+          return buffer;
+        }
+
+        function playInstrument(type) {
+          const ctx = ensureAudioContext();
+          const now = ctx.currentTime;
+
+          const makeGain = (value, duration) => {
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(value, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            return gain;
+          };
+
+          if (type === "kick" || type === "sub") {
+            const osc = ctx.createOscillator();
+            const gain = makeGain(type === "sub" ? 1.2 : 1, type === "sub" ? 1.2 : 0.5);
+            osc.type = "sine";
+            const startFreq = type === "sub" ? 80 : 150;
+            const endFreq = type === "sub" ? 20 : 50;
+            osc.frequency.setValueAtTime(startFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(endFreq, now + (type === "sub" ? 1 : 0.4));
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + (type === "sub" ? 1.2 : 0.5));
+            return;
+          }
+
+          if (type === "snare" || type === "clap" || type === "hihat" || type === "shaker") {
+            const buffer = state.noiseBuffer || createNoiseBuffer();
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = "highpass";
+            noiseFilter.frequency.value =
+              type === "snare" ? 1200 : type === "clap" ? 400 : type === "hihat" ? 6000 : 2500;
+            const gain = makeGain(
+              type === "snare" ? 0.8 : type === "clap" ? 0.65 : type === "shaker" ? 0.3 : 0.4,
+              type === "hihat" ? 0.15 : type === "clap" ? 0.25 : type === "shaker" ? 0.4 : 0.3
+            );
+            noise.connect(noiseFilter).connect(gain).connect(ctx.destination);
+            noise.start(now);
+            noise.stop(now + (type === "shaker" ? 0.5 : 0.3));
+
+            if (type === "snare" || type === "clap") {
+              const osc = ctx.createOscillator();
+              const oscGain = makeGain(0.4, 0.2);
+              osc.frequency.setValueAtTime(type === "snare" ? 190 : 280, now);
+              osc.connect(oscGain).connect(ctx.destination);
+              osc.start(now);
+              osc.stop(now + 0.2);
+            }
+            return;
+          }
+
+          if (type.startsWith("tom")) {
+            const osc = ctx.createOscillator();
+            const gain = makeGain(0.9, 0.6);
+            osc.type = "sine";
+            const baseFreq = type === "tom-low" ? 180 : type === "tom-mid" ? 260 : 320;
+            osc.frequency.setValueAtTime(baseFreq + 40, now);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq / 2, now + 0.6);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.6);
+            return;
+          }
+
+          if (type === "ride" || type === "crash") {
+            const buffer = state.noiseBuffer || createNoiseBuffer();
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const bandpass = ctx.createBiquadFilter();
+            bandpass.type = "bandpass";
+            bandpass.frequency.value = type === "ride" ? 7000 : 5200;
+            const gain = makeGain(type === "ride" ? 0.4 : 0.7, type === "ride" ? 1.1 : 1.4);
+            noise.connect(bandpass).connect(gain).connect(ctx.destination);
+            noise.start(now);
+            noise.stop(now + (type === "ride" ? 1.2 : 1.5));
+            return;
+          }
+
+          if (type === "perc") {
+            const osc = ctx.createOscillator();
+            const gain = makeGain(0.5, 0.2);
+            osc.type = "square";
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(320, now + 0.2);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.2);
+          }
+        }
+
+        function setStatus(text) {
+          if (statusCache === text) return;
+          statusCache = text;
+          statusEl.textContent = text;
+        }
+
+        const createTapeItem = (entry, index) => {
+          const item = doc.createElement("div");
+          item.className = "timeline-item";
+          const time = (entry.time / 1000).toFixed(2).padStart(5, "0");
+          item.innerHTML = `<span>#${index + 1} · ${entry.label}</span><span>${time}s</span>`;
+          return item;
+        };
+
+        const renderEmptyTape = () => {
+          const empty = doc.createElement("div");
+          empty.className = "tape-empty";
+          empty.textContent = "No takes yet. Record a groove to fill this reel.";
+          return empty;
+        };
+
+        function updateTape(options = {}) {
+          const { appendLatest = false } = options;
+          if (!state.recording.length) {
+            tapeEl.innerHTML = "";
+            tapeEl.appendChild(renderEmptyTape());
+            return;
+          }
+          if (
+            appendLatest &&
+            tapeEl.children.length &&
+            !tapeEl.firstElementChild.classList.contains("tape-empty")
+          ) {
+            const index = state.recording.length - 1;
+            tapeEl.appendChild(createTapeItem(state.recording[index], index));
+            return;
+          }
+          const frag = doc.createDocumentFragment();
+          state.recording.forEach((entry, index) => {
+            frag.appendChild(createTapeItem(entry, index));
+          });
+          tapeEl.innerHTML = "";
+          tapeEl.appendChild(frag);
+        }
+
+        function activatePad(padKey) {
+          const pad = state.pads.get(padKey);
+          if (!pad) return;
+          pad.element.classList.add("active");
+          setTimeout(() => pad.element.classList.remove("active"), 120);
+        }
+
+        function triggerPad(padKey) {
+          const pad = state.pads.get(padKey);
+          if (!pad) return;
+          activatePad(padKey);
+          playInstrument(pad.type);
+          if (state.isRecording) {
+            const time = performance.now() - state.recordStart;
+            state.recording.push({
+              key: padKey,
+              label: pad.label,
+              type: pad.type,
+              time,
+            });
+            updateTape({ appendLatest: true });
+            setStatus(`recording… ${state.recording.length} hits`);
+          }
+        }
+
+        function startRecording() {
+          state.isRecording = true;
+          state.recordStart = performance.now();
+          state.recording = [];
+          clearPlayback();
+          updateTape();
+          setStatus("recording… start playing your pads");
+          recordBtn.setAttribute("disabled", "true");
+          playBtn.setAttribute("disabled", "true");
+          inputFocus();
+        }
+
+        function stopRecording() {
+          if (state.isRecording) {
+            state.isRecording = false;
+            setStatus("recording stopped");
+            if (state.recording.length) {
+              playBtn.removeAttribute("disabled");
+            }
+          }
+          recordBtn.removeAttribute("disabled");
+        }
+
+        function clearPlayback() {
+          state.playbackTimers.forEach((id) => clearTimeout(id));
+          state.playbackTimers = [];
+          state.isPlaying = false;
+        }
+
+        function playRecording() {
+          if (!state.recording.length || state.isPlaying) return;
+          stopRecording();
+          clearPlayback();
+          state.isPlaying = true;
+          setStatus("playback…");
+          const start = performance.now();
+          state.recording.forEach((entry, index) => {
+            const timer = setTimeout(() => {
+              triggerPad(entry.key);
+              if (index === state.recording.length - 1) {
+                setTimeout(() => {
+                  state.isPlaying = false;
+                  setStatus("playback finished");
+                }, 150);
+              }
+            }, entry.time);
+            state.playbackTimers.push(timer);
+          });
+        }
+
+        function clearRecording() {
+          clearPlayback();
+          state.recording = [];
+          state.isRecording = false;
+          recordBtn.removeAttribute("disabled");
+          playBtn.setAttribute("disabled", "true");
+          updateTape();
+          setStatus("tape cleared");
+        }
+
+        function inputFocus() {
+          // keep keyboard active by focusing body
+          window.focus();
+        }
+
+        function buildPads() {
+          const frag = doc.createDocumentFragment();
+          padConfig.forEach((pad) => {
+            const padEl = doc.createElement("div");
+            padEl.className = "pad";
+            padEl.dataset.key = pad.key;
+            padEl.innerHTML = `
+              <div class="pad-key">${pad.key}</div>
+              <div class="pad-label">${pad.label}</div>
+              <div class="pad-desc">${pad.hint}</div>
+            `;
+            padEl.addEventListener("pointerdown", () => {
+              ensureAudioContext();
+              triggerPad(pad.key);
+            });
+            frag.appendChild(padEl);
+            state.pads.set(pad.key.toUpperCase(), {
+              ...pad,
+              element: padEl,
+            });
+          });
+          padGrid.appendChild(frag);
+        }
+
+        function handleKeydown(event) {
+          const key = event.key.toUpperCase();
+          if (state.pads.has(key)) {
+            event.preventDefault();
+            ensureAudioContext();
+            triggerPad(key);
+          }
+        }
+
+        recordBtn.addEventListener("click", startRecording);
+        stopBtn.addEventListener("click", () => {
+          stopRecording();
+          clearPlayback();
+          setStatus("stopped");
+        });
+        playBtn.addEventListener("click", playRecording);
+        playBtn.setAttribute("disabled", "true");
+        clearBtn.addEventListener("click", clearRecording);
+
+        doc.addEventListener("keydown", handleKeydown);
+        buildPads();
+        updateTape();
+      })();
+    </script>
+  </body>
+</html>

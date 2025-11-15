@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Typing Speed Race</title>
+    <style>
+      :root {
+        --bg: #030712;
+        --panel: #0d1325;
+        --panel-light: #161d33;
+        --accent: #67f2ff;
+        --accent-2: #ff8ef3;
+        --text: #f8fbff;
+        --muted: #94a1c2;
+        --danger: #ff5f5f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 20%, #152344, #050712 70%);
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        padding: 2rem 1rem 3rem;
+      }
+
+      button {
+        font-family: inherit;
+        border: none;
+        cursor: pointer;
+        border-radius: 999px;
+        padding: 0.65rem 1.8rem;
+        font-size: 1rem;
+        color: #05111b;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      button:not(:disabled):active {
+        transform: scale(0.97);
+      }
+
+      .shell {
+        width: min(1100px, 96vw);
+        background: rgba(5, 9, 20, 0.94);
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: clamp(1rem, 4vw, 2rem) clamp(1.1rem, 4.5vw, 2.8rem);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(12px);
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .title h1 {
+        font-size: clamp(1.8rem, 4vw, 3rem);
+        margin: 0;
+      }
+
+      .title p {
+        margin: 0.2rem 0 0;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+      }
+
+      .tag {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        padding: 0.4rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--accent);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.8rem;
+      }
+
+      .stat-card {
+        background: var(--panel);
+        border-radius: 16px;
+        padding: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .stat-card small {
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        font-size: 0.7rem;
+      }
+
+      .stat-card strong {
+        display: block;
+        font-size: 2.1rem;
+        margin-top: 0.4rem;
+      }
+
+      .prompt-box {
+        margin-top: 1.5rem;
+        background: var(--panel-light);
+        border-radius: 18px;
+        padding: 1.4rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        min-height: 150px;
+        font-size: 1.2rem;
+        line-height: 1.6;
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: default;
+      }
+
+      .prompt-box span {
+        padding: 0.1rem 0.05rem;
+      }
+
+      .prompt-box .correct {
+        color: var(--accent);
+      }
+
+      .prompt-box .incorrect {
+        color: var(--danger);
+        background: rgba(255, 95, 95, 0.18);
+      }
+
+      .prompt-box .current {
+        border-bottom: 2px solid var(--accent-2);
+      }
+
+      .editor {
+        margin-top: 1rem;
+      }
+
+      textarea {
+        width: 100%;
+        border-radius: 22px;
+        border: 2px solid rgba(255, 255, 255, 0.08);
+        background: #050912;
+        color: var(--text);
+        min-height: 190px;
+        font-size: 1.25rem;
+        padding: 1.2rem;
+        resize: vertical;
+        line-height: 1.6;
+        font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        outline: none;
+        transition: border 0.2s ease;
+      }
+
+      textarea:focus {
+        border-color: var(--accent);
+      }
+
+      textarea:disabled {
+        opacity: 0.3;
+      }
+
+      .controls {
+        margin-top: 1.3rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+      }
+
+      .soft-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text);
+      }
+
+      .soft-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .countdown-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(3, 7, 18, 0.9);
+        border-radius: 26px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .countdown-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .countdown-overlay span {
+        font-size: clamp(3rem, 14vw, 5.8rem);
+        font-weight: 600;
+        text-transform: uppercase;
+        animation: pulse 0.8s ease forwards;
+      }
+
+      @keyframes pulse {
+        from {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .history-panel {
+        margin-top: 2rem;
+        background: var(--panel);
+        border-radius: 24px;
+        padding: 1.3rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .history-panel header {
+        margin-bottom: 1rem;
+      }
+
+      canvas {
+        width: 100%;
+        height: 220px;
+      }
+
+      .history-caption {
+        margin-top: 0.6rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .layout-relative {
+        position: relative;
+      }
+
+      @media (max-width: 600px) {
+        .controls {
+          flex-direction: column;
+        }
+
+        button,
+        .soft-btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="title">
+          <h1>Typing Speed Race</h1>
+        </div>
+        <div class="tag">timed challenge</div>
+      </header>
+
+      <section class="stats">
+        <article class="stat-card">
+          <small>wpm</small>
+          <strong id="wpm">0</strong>
+        </article>
+        <article class="stat-card">
+          <small>accuracy</small>
+          <strong id="accuracy">100%</strong>
+        </article>
+        <article class="stat-card">
+          <small>time left</small>
+          <strong id="timer">60s</strong>
+        </article>
+      </section>
+
+      <section class="prompt-box" id="prompt"></section>
+
+      <div class="editor layout-relative">
+        <textarea
+          id="typed-input"
+          placeholder="Wait for the countdown, then type the paragraph here..."
+          disabled
+        ></textarea>
+        <div class="countdown-overlay" id="countdown">
+          <span></span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="start-btn">Start Race</button>
+        <button class="soft-btn" id="shuffle-btn">New Paragraph</button>
+        <button class="soft-btn" id="clear-btn">Clear History</button>
+      </div>
+
+      <section class="history-panel">
+        <header>
+          <div class="title">
+            <h2 style="margin: 0; font-size: 1.4rem">History Chart</h2>
+          </div>
+        </header>
+        <canvas id="history-canvas" width="900" height="240"></canvas>
+        <p class="history-caption">
+          Tracks the last few completed races. Chase consistency, not just spikes.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      (() => {
+        const doc = document;
+        const promptEl = doc.getElementById("prompt");
+        const inputEl = doc.getElementById("typed-input");
+        const wpmEl = doc.getElementById("wpm");
+        const accuracyEl = doc.getElementById("accuracy");
+        const timerEl = doc.getElementById("timer");
+        const startBtn = doc.getElementById("start-btn");
+        const shuffleBtn = doc.getElementById("shuffle-btn");
+        const clearBtn = doc.getElementById("clear-btn");
+        const countdownOverlay = doc.getElementById("countdown");
+        const countdownText = countdownOverlay.querySelector("span");
+        const canvas = doc.getElementById("history-canvas");
+        const ctx = canvas.getContext("2d");
+        let promptSpans = [];
+
+        const historyKey = "typing-speed-race-history";
+        const duration = 60;
+
+        const paragraphs = [
+          "The quick cerulean fox invented a keyboard powered by bubble tea, proving that inspiration arrives when fingers dance confidently. Tonight it sprints across a glass rooftop, testing each key like a piano virtuoso while the city hums beneath. Every wobbling bubble spells another sentence and the fox refuses to lift its paws until the sky blushes.",
+          "Beneath neon lights, curious coders race their thoughts, forming letters like constellations to capture outrageous ideas. A projector throws their words onto clouds, forcing them to think faster than the shifting wind. When the lights pulse, the whole rooftop applauds and the typists vow to return.",
+          "Typing rapidly is not about crushing keys but about breathing steadily, trusting rhythm, and letting stories roll effortlessly. Veteran racers describe the feeling as surfing a note that never ends. By the final sentence, the keyboard feels like warm sand and the world goes quiet.",
+          "Every mismatched letter becomes a coach, whispering adjustments that transform chaotic sentences into pitch perfect anthems. Mistakes sketch tiny arrows above the keys, nudging wrists into relaxed arcs. After a dozen trials, accuracy turns into a soundtrack of satisfied clicks.",
+          "Imagine a laboratory where words hover in holograms and you pluck them gently to assemble paragraphs of optimistic momentum. Each selected phrase leaves a trail of glitter that urges you to keep writing. Even the ventilation system seems to chant supportive mantras about cadence.",
+          "Caffeine-free mornings exist when your muscle memory carries the narrative and the keyboard merely waves colorful flags. Sunrise pours through the blinds, painting the desk with citrus gradients while the clock forgets to tick. You realize breakfast can wait because the sentence at hand tastes better.",
+          "In this MCP arena, racers compare WPM like trading cards yet secretly celebrate every rival because progress loves company. Friendly taunts bounce around the hall, but each cheer hides a syllabus of shared shortcuts. The scoreboard becomes a collage of nicknames and half-finished jokes.",
+          "Sunrise drips through the blinds, painting the desk gold while the cursor blinks impatiently, ready to sprint again. Birds echo the metronome from the nearby cafe, creating a natural countdown. Once the race starts, the room feels like a ship slicing through fresh waves of vocabulary.",
+        ];
+
+        const state = {
+          target: "",
+          startTime: null,
+          timerId: null,
+          countdownId: null,
+          active: false,
+          completed: false,
+          history: [],
+        };
+
+        ["copy", "contextmenu", "selectstart"].forEach((eventName) => {
+          promptEl.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
+        });
+
+        function randomParagraph() {
+          const base = paragraphs[Math.floor(Math.random() * paragraphs.length)];
+          const remix =
+            Math.random() > 0.5
+              ? base
+              : base +
+                " " +
+                paragraphs[Math.floor(Math.random() * paragraphs.length)]
+                  .split(" ")
+                  .slice(0, 7)
+                  .join(" ") +
+                ".";
+          return remix.replace(/\s+/g, " ").trim();
+        }
+
+        function loadHistory() {
+          try {
+            const stored = JSON.parse(localStorage.getItem(historyKey) || "[]");
+            if (Array.isArray(stored)) {
+              state.history = stored.slice(0, 10);
+            } else {
+              state.history = [];
+            }
+          } catch {
+            state.history = [];
+          }
+          drawHistory();
+        }
+
+        function saveHistory() {
+          localStorage.setItem(historyKey, JSON.stringify(state.history));
+        }
+
+        function formatPrompt() {
+          promptEl.innerHTML = "";
+          const frag = doc.createDocumentFragment();
+          promptSpans = [];
+          for (const char of state.target) {
+            const span = doc.createElement("span");
+            span.textContent = char;
+            promptSpans.push(span);
+            frag.appendChild(span);
+          }
+          promptEl.appendChild(frag);
+        }
+
+        function updatePromptHighlight() {
+          const typed = inputEl.value;
+          for (let i = 0; i < promptSpans.length; i++) {
+            const span = promptSpans[i];
+            span.className = "";
+            if (i < typed.length) {
+              if (typed[i] === state.target[i]) span.classList.add("correct");
+              else span.classList.add("incorrect");
+            } else if (i === typed.length && state.active) {
+              span.classList.add("current");
+            }
+          }
+        }
+
+        function computeStats() {
+          const typed = inputEl.value;
+          let correct = 0;
+          for (let i = 0; i < typed.length && i < state.target.length; i++) {
+            if (typed[i] === state.target[i]) correct++;
+          }
+          const elapsed = state.startTime ? (performance.now() - state.startTime) / 1000 : 0;
+          const minutes = elapsed / 60;
+          const grossWpm = minutes > 0 ? (typed.length / 5) / minutes : 0;
+          const netWpm = Math.max(0, (correct / 5) / (minutes || 1 / 60));
+          const accuracy = typed.length ? (correct / typed.length) * 100 : 100;
+          return {
+            wpm: minutes > 0 ? Math.round(netWpm) : 0,
+            accuracy: accuracy.toFixed(1),
+            elapsed,
+            remaining: Math.max(0, duration - elapsed),
+            correct,
+          };
+        }
+
+        function updateStatsDisplay(stats = computeStats()) {
+          const { wpm, accuracy, remaining } = stats;
+          wpmEl.textContent = wpm.toString();
+          accuracyEl.textContent = `${accuracy}%`;
+          timerEl.textContent = `${Math.ceil(remaining)}s`;
+        }
+
+        function clearTimers() {
+          if (state.timerId) {
+            clearInterval(state.timerId);
+            state.timerId = null;
+          }
+        }
+
+        function finishRace(reason = "time") {
+          if (!state.active && state.completed) return;
+          clearTimers();
+          state.active = false;
+          state.completed = true;
+          inputEl.setAttribute("disabled", "true");
+          const { wpm, accuracy } = computeStats();
+          state.history.unshift({
+            wpm,
+            accuracy: Number(accuracy),
+            tag: reason === "full" ? "completed" : "time",
+            ts: Date.now(),
+          });
+          state.history = state.history.slice(0, 10);
+          saveHistory();
+          drawHistory();
+          startBtn.removeAttribute("disabled");
+        }
+
+        function beginRace() {
+          state.startTime = performance.now();
+          state.active = true;
+          state.completed = false;
+          inputEl.removeAttribute("disabled");
+          inputEl.value = "";
+          inputEl.focus();
+          updatePromptHighlight();
+          updateStatsDisplay();
+          clearTimers();
+          state.timerId = setInterval(() => {
+            updatePromptHighlight();
+            const stats = computeStats();
+            updateStatsDisplay(stats);
+            const { remaining } = stats;
+            if (remaining <= 0) {
+              finishRace("time");
+            }
+            if (inputEl.value.length >= state.target.length) {
+              finishRace("full");
+            }
+          }, 120);
+        }
+
+        function runCountdown() {
+          if (state.active || state.countdownId) return;
+          countdownOverlay.classList.add("visible");
+          const sequence = ["3", "2", "1", "Go!"];
+          let index = 0;
+          countdownText.textContent = sequence[index];
+          inputEl.setAttribute("disabled", "true");
+          state.countdownId = setInterval(() => {
+            index += 1;
+            if (index < sequence.length) {
+              countdownText.textContent = sequence[index];
+            } else {
+              clearInterval(state.countdownId);
+              state.countdownId = null;
+              countdownOverlay.classList.remove("visible");
+              beginRace();
+            }
+          }, 900);
+        }
+
+        function initParagraph() {
+          state.target = randomParagraph();
+          formatPrompt();
+          updatePromptHighlight();
+          inputEl.value = "";
+          inputEl.setAttribute("disabled", "true");
+          state.active = false;
+          state.completed = false;
+          startBtn.removeAttribute("disabled");
+          clearTimers();
+          wpmEl.textContent = "0";
+          accuracyEl.textContent = "100%";
+          timerEl.textContent = `${duration}s`;
+        }
+
+        function drawHistory() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#050912";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.strokeStyle = "rgba(255,255,255,0.1)";
+          ctx.lineWidth = 1;
+          const padding = 40;
+          ctx.beginPath();
+          ctx.moveTo(padding, padding);
+          ctx.lineTo(padding, canvas.height - padding);
+          ctx.lineTo(canvas.width - padding, canvas.height - padding);
+          ctx.stroke();
+
+          if (!state.history.length) {
+            ctx.fillStyle = "rgba(255,255,255,0.6)";
+            ctx.font = "16px 'Space Grotesk'";
+            ctx.fillText("No races yet. Smash Start to log your first WPM.", padding + 10, canvas.height / 2);
+            return;
+          }
+
+          const values = state.history.map((entry) => entry.wpm);
+          const maxVal = Math.max(40, ...values);
+          const graphWidth = canvas.width - padding * 2;
+          const graphHeight = canvas.height - padding * 2;
+          const stepX = values.length > 1 ? graphWidth / (values.length - 1) : 0;
+
+          ctx.strokeStyle = "rgba(103, 242, 255, 0.3)";
+          ctx.setLineDash([4, 6]);
+          for (let i = 0; i <= 4; i++) {
+            const y = padding + (graphHeight / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding, y);
+            ctx.lineTo(canvas.width - padding, y);
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+
+          ctx.beginPath();
+          values.forEach((val, idx) => {
+            const x = padding + stepX * idx;
+            const y = padding + graphHeight - (val / maxVal) * graphHeight;
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = "rgba(255, 142, 243, 0.8)";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          values.forEach((val, idx) => {
+            const x = padding + stepX * idx;
+            const y = padding + graphHeight - (val / maxVal) * graphHeight;
+            ctx.fillStyle = "rgba(103, 242, 255, 0.9)";
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = "14px 'Space Grotesk'";
+            ctx.fillText(`${val} wpm`, x - 20, y - 12);
+          });
+        }
+
+        inputEl.addEventListener("input", () => {
+          updatePromptHighlight();
+          updateStatsDisplay();
+        });
+
+        startBtn.addEventListener("click", () => {
+          startBtn.setAttribute("disabled", "true");
+          runCountdown();
+        });
+
+        shuffleBtn.addEventListener("click", () => {
+          initParagraph();
+        });
+
+        clearBtn.addEventListener("click", () => {
+          state.history = [];
+          saveHistory();
+          drawHistory();
+        });
+
+        doc.addEventListener("keydown", (event) => {
+          if (event.code === "Enter" && event.metaKey) {
+            event.preventDefault();
+            if (!state.active) {
+              startBtn.click();
+            }
+          }
+        });
+
+        initParagraph();
+        loadHistory();
+      })();
+    </script>
+  </body>
+</html>

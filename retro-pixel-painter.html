@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Context7 Pixel Studio</title>
+    <style>
+      :root {
+        --shell: #cfcfd4;
+        --shell-dark: #7e7e8a;
+        --shell-light: #fdfdfd;
+        --desk: #182542;
+        --accent: #ff4ec7;
+        --text: #1c1c26;
+        --zoom: 12;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 20% 20%, #2a1560, #070714 70%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        color: var(--text);
+      }
+
+      button,
+      input,
+      select {
+        font-family: inherit;
+      }
+
+      .desktop {
+        width: min(1200px, 98vw);
+        position: relative;
+      }
+
+      .window {
+        position: relative;
+        border: 3px solid var(--shell-dark);
+        border-right-color: var(--shell-light);
+        border-bottom-color: var(--shell-light);
+        border-radius: 6px;
+        background: var(--shell);
+        box-shadow: 0 30px 60px rgba(5, 7, 35, 0.65);
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+      }
+
+      .title-bar {
+        background: linear-gradient(90deg, #0a53c2, #7c95ff);
+        color: #fff;
+        padding: 0.3rem 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: move;
+      }
+
+      .title-bar strong {
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+      }
+
+      .title-bar .badge {
+        font-size: 0.65rem;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 0.1rem 0.5rem;
+        border-radius: 4px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .title-buttons {
+        margin-left: auto;
+        display: flex;
+        gap: 0.2rem;
+      }
+
+      .pixel-btn {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #010101;
+        background: linear-gradient(var(--shell-light), var(--shell));
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+      }
+
+      .window-body {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(200px, 240px) minmax(240px, 1fr) minmax(200px, 250px);
+        gap: 1rem;
+      }
+
+      @media (max-width: 980px) {
+        .workspace {
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+      }
+
+      .panel {
+        border: 2px solid var(--shell-dark);
+        border-top-color: var(--shell-light);
+        border-left-color: var(--shell-light);
+        padding: 0.8rem;
+        border-radius: 6px;
+        background: #f4f4f4;
+      }
+
+      .panel h3 {
+        margin: 0 0 0.5rem;
+        font-size: 0.85rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 0.4rem;
+      }
+
+      .icon-btn {
+        position: relative;
+        border: 2px solid var(--shell-dark);
+        border-radius: 6px;
+        background: linear-gradient(#fff, #cfd4dd);
+        padding: 0.5rem;
+        text-align: center;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .icon-btn.active {
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 2px rgba(255, 78, 199, 0.3);
+      }
+
+      .icon-btn:focus-visible {
+        outline: 2px dashed var(--accent);
+      }
+
+      .icon-btn[data-tip]::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 50%;
+        top: -26px;
+        transform: translateX(-50%);
+        background: #000;
+        color: #fff;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.65rem;
+        border-radius: 4px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        white-space: nowrap;
+      }
+
+      .icon-btn:hover::after {
+        opacity: 0.85;
+      }
+
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(28px, 1fr));
+        gap: 0.3rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .swatch {
+        width: 100%;
+        padding-top: 100%;
+        position: relative;
+        border: 2px solid rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+      }
+
+      .swatch.selected::after {
+        content: "";
+        position: absolute;
+        inset: 20%;
+        border: 2px solid #fff;
+      }
+
+      .color-io {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .color-io input[type="color"] {
+        flex: 1;
+        height: 34px;
+        border: none;
+        padding: 0;
+      }
+
+      .canvas-wrap {
+        position: relative;
+        background: #0c1020;
+        border: 2px solid var(--shell-dark);
+        border-radius: 8px;
+        padding: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      canvas {
+        image-rendering: pixelated;
+      }
+
+      .canvas-stage {
+        position: relative;
+        border: 2px solid #202642;
+        border-radius: 6px;
+        background: #000;
+      }
+
+      #pixel-canvas {
+        width: calc(var(--zoom) * 32px);
+        height: calc(var(--zoom) * 32px);
+        border: none;
+        background: transparent;
+      }
+
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: linear-gradient(0deg, #ffffff22 1px, transparent 1px),
+          linear-gradient(90deg, #ffffff22 1px, transparent 1px);
+        background-size: calc(var(--zoom) * 1px) calc(var(--zoom) * 1px);
+      }
+
+      .grid-overlay.hidden {
+        opacity: 0;
+      }
+
+      .selection-box {
+        position: absolute;
+        border: 2px dashed #fffb;
+        pointer-events: none;
+        display: none;
+      }
+
+      .status-bar {
+        border-top: 2px solid var(--shell-dark);
+        background: #ebebed;
+        padding: 0.3rem 0.6rem;
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+      }
+
+      .shortcuts {
+        font-size: 0.75rem;
+        color: #50525c;
+        margin-top: 0.4rem;
+        line-height: 1.4;
+      }
+
+      .io-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .io-row input[type="file"] {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="desktop">
+      <div class="window" id="window">
+        <div class="title-bar" id="titleBar" aria-label="Context7 Pixel Studio window drag handle">
+          <strong>Context7 Pixel Studio</strong>
+          <span class="badge">retro lab</span>
+          <div class="title-buttons">
+            <div class="pixel-btn" aria-hidden="true">_</div>
+            <div class="pixel-btn" aria-hidden="true">□</div>
+            <div class="pixel-btn" aria-hidden="true">X</div>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="workspace">
+            <section class="panel" aria-label="Tool palette">
+              <h3>Tools</h3>
+              <div class="tools-grid" id="toolButtons" role="toolbar"></div>
+              <div class="shortcuts">
+                1-8 tools • +/- zoom • Ctrl+Z/Ctrl+Y undo/redo • Ctrl+C/Ctrl+V selection
+              </div>
+              <h3>Selection</h3>
+              <div class="tools-grid">
+                <button class="icon-btn" id="copyBtn" data-tip="Copy (Ctrl+C)" type="button">
+                  ⧉ Copy
+                </button>
+                <button class="icon-btn" id="pasteBtn" data-tip="Paste (Ctrl+V)" type="button">
+                  📥 Paste
+                </button>
+                <button class="icon-btn" id="flipXBtn" data-tip="Flip horizontal" type="button">
+                  ⇋ Flip H
+                </button>
+                <button class="icon-btn" id="flipYBtn" data-tip="Flip vertical" type="button">
+                  ⇵ Flip V
+                </button>
+                <button class="icon-btn" id="rotateBtn" data-tip="Rotate 90°" type="button">
+                  ↻ Rotate
+                </button>
+                <button class="icon-btn" id="clearBtn" data-tip="Clear canvas" type="button">
+                  ✖ Clear
+                </button>
+              </div>
+              <h3>Edit</h3>
+              <div class="tools-grid">
+                <button class="icon-btn" id="undoBtn" data-tip="Undo" type="button">↶ Undo</button>
+                <button class="icon-btn" id="redoBtn" data-tip="Redo" type="button">↷ Redo</button>
+                <button class="icon-btn" id="gridBtn" data-tip="Toggle grid" type="button">
+                  # Grid
+                </button>
+              </div>
+            </section>
+
+            <section class="panel canvas-panel" aria-label="Canvas editor">
+              <h3>Pixel Canvas</h3>
+              <div class="canvas-wrap">
+                <div class="canvas-stage" id="canvasStage">
+                  <canvas
+                    id="pixel-canvas"
+                    width="32"
+                    height="32"
+                    aria-label="Pixel canvas"
+                    tabindex="0"
+                  ></canvas>
+                  <div class="grid-overlay" id="gridOverlay"></div>
+                  <div class="selection-box" id="selectionBox"></div>
+                </div>
+                <label>
+                  Zoom
+                  <input type="range" id="zoomSlider" min="6" max="24" value="12" />
+                </label>
+              </div>
+            </section>
+
+            <section class="panel" aria-label="Palette and I/O">
+              <h3>Palette</h3>
+              <div class="palette" id="palette"></div>
+              <div class="color-io">
+                <label style="flex:1">
+                  FG
+                  <input type="color" id="fgInput" value="#ff4ec7" />
+                </label>
+                <label style="flex:1">
+                  BG
+                  <input type="color" id="bgInput" value="#050505" />
+                </label>
+                <button class="icon-btn" id="swapBtn" data-tip="Swap colors" type="button">
+                  ⇄
+                </button>
+              </div>
+              <button class="icon-btn" id="eyedropBtn" data-tip="Eyedropper tool" type="button">
+                👁 Sample
+              </button>
+
+              <h3>Import / Export</h3>
+              <div class="io-row">
+                <label for="importInput" style="font-size:0.8rem">Import PNG</label>
+                <input type="file" id="importInput" accept="image/png" />
+              </div>
+              <div class="tools-grid">
+                <button class="icon-btn" id="exportPngBtn" data-tip="Export PNG" type="button">
+                  PNG
+                </button>
+                <button
+                  class="icon-btn"
+                  id="exportSheetBtn"
+                  data-tip="Export spritesheet + JSON"
+                  type="button"
+                >
+                  Sheet+JSON
+                </button>
+                <button class="icon-btn" id="saveBtn" data-tip="Save to browser" type="button">
+                  💾 Save
+                </button>
+                <button class="icon-btn" id="loadBtn" data-tip="Load save" type="button">
+                  📂 Load
+                </button>
+              </div>
+              <h3>Hints</h3>
+              <ul style="font-size:0.8rem;line-height:1.4;padding-left:1.2rem;margin:0;">
+                <li>Hold and drag for lines or shapes.</li>
+                <li>Select tool (7) to capture an area.</li>
+                <li>Use +/- keys for quick zoom.</li>
+              </ul>
+            </section>
+          </div>
+        </div>
+        <div class="status-bar" role="status">
+          <div id="statusTool">Tool: Pencil</div>
+          <div id="statusCoords">Cursor: - , -</div>
+          <div id="statusColor">Color: #ff4ec7</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const width = 32;
+        const height = 32;
+        const paletteColors = [
+          "#000000",
+          "#ffffff",
+          "#ff4ec7",
+          "#00d9ff",
+          "#35ff82",
+          "#ffd319",
+          "#ff6b35",
+          "#5465ff",
+          "#845ef7",
+          "#ffafcc",
+          "#ffa69e",
+          "#f72585",
+          "#7209b7",
+          "#4361ee",
+          "#3a86ff",
+          "#79b4b7",
+        ];
+
+        const state = {
+          grid: new Array(width * height).fill("#00000000"),
+          tool: "pencil",
+          fg: "#ff4ec7",
+          bg: "#050505",
+          zoom: 12,
+          pointerDown: false,
+          startPoint: null,
+          selection: null,
+          clipboard: null,
+          gridVisible: true,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        const toolList = [
+          { id: "pencil", label: "✏ Pencil", key: "1" },
+          { id: "eraser", label: "⌫ Eraser", key: "2" },
+          { id: "fill", label: "🪣 Fill", key: "3" },
+          { id: "line", label: "／ Line", key: "4" },
+          { id: "rect", label: "▭ Rect", key: "5" },
+          { id: "circle", label: "◯ Circle", key: "6" },
+          { id: "select", label: "▣ Select", key: "7" },
+          { id: "eyedrop", label: "👁 Drop", key: "8" },
+        ];
+
+        const canvas = document.getElementById("pixel-canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        const selectionBox = document.getElementById("selectionBox");
+        const gridOverlay = document.getElementById("gridOverlay");
+        const paletteEl = document.getElementById("palette");
+        const toolButtonsEl = document.getElementById("toolButtons");
+        const fgInput = document.getElementById("fgInput");
+        const bgInput = document.getElementById("bgInput");
+        const zoomSlider = document.getElementById("zoomSlider");
+        const statusTool = document.getElementById("statusTool");
+        const statusCoords = document.getElementById("statusCoords");
+        const statusColor = document.getElementById("statusColor");
+        let canvasRect = canvas.getBoundingClientRect();
+        const updateCanvasRect = () => {
+          canvasRect = canvas.getBoundingClientRect();
+        };
+        window.addEventListener("resize", updateCanvasRect);
+        if ("ResizeObserver" in window) {
+          const observer = new ResizeObserver(updateCanvasRect);
+          observer.observe(canvas);
+        }
+
+        const copyBtn = document.getElementById("copyBtn");
+        const pasteBtn = document.getElementById("pasteBtn");
+        const flipXBtn = document.getElementById("flipXBtn");
+        const flipYBtn = document.getElementById("flipYBtn");
+        const rotateBtn = document.getElementById("rotateBtn");
+        const clearBtn = document.getElementById("clearBtn");
+        const undoBtn = document.getElementById("undoBtn");
+        const redoBtn = document.getElementById("redoBtn");
+        const gridBtn = document.getElementById("gridBtn");
+        const importInput = document.getElementById("importInput");
+        const exportPngBtn = document.getElementById("exportPngBtn");
+        const exportSheetBtn = document.getElementById("exportSheetBtn");
+        const saveBtn = document.getElementById("saveBtn");
+        const loadBtn = document.getElementById("loadBtn");
+        const eyedropBtn = document.getElementById("eyedropBtn");
+        const swapBtn = document.getElementById("swapBtn");
+
+        function normalizeColor(hex) {
+          if (!hex) return "#000000";
+          const clean = hex.replace("#", "");
+          return "#" + clean.padEnd(6, "0").slice(0, 6);
+        }
+
+        function pushUndo() {
+          state.undoStack.push([...state.grid]);
+          if (state.undoStack.length > 50) state.undoStack.shift();
+          state.redoStack = [];
+        }
+
+        function restoreGrid(newGrid) {
+          state.grid = [...newGrid];
+          render();
+        }
+
+        function setPixel(x, y, color) {
+          if (x < 0 || y < 0 || x >= width || y >= height) return;
+          state.grid[y * width + x] = color;
+        }
+
+        function getPixel(x, y) {
+          if (x < 0 || y < 0 || x >= width || y >= height) return "#00000000";
+          return state.grid[y * width + x];
+        }
+
+        const imageData = ctx.createImageData(width, height);
+        const pixelBuffer = new Uint32Array(imageData.data.buffer);
+        const colorCache = new Map();
+
+        function colorToUint(hex) {
+          if (!hex || hex === "#00000000") return 0;
+          if (colorCache.has(hex)) return colorCache.get(hex);
+          let clean = hex.replace("#", "");
+          if (clean.length === 6) clean += "ff";
+          const r = parseInt(clean.slice(0, 2), 16);
+          const g = parseInt(clean.slice(2, 4), 16);
+          const b = parseInt(clean.slice(4, 6), 16);
+          const a = parseInt(clean.slice(6, 8), 16);
+          const value = (a << 24) | (b << 16) | (g << 8) | r;
+          colorCache.set(hex, value);
+          return value;
+        }
+
+        function render() {
+          const grid = state.grid;
+          for (let i = 0; i < grid.length; i++) {
+            pixelBuffer[i] = colorToUint(grid[i]);
+          }
+          ctx.putImageData(imageData, 0, 0);
+        }
+
+        function hexToRGBA(hex) {
+          if (!hex || hex === "#00000000") return [0, 0, 0, 0];
+          const parsed = hex.replace("#", "");
+          const bigint = parseInt(parsed, 16);
+          if (parsed.length === 6) {
+            return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255, 255];
+          }
+          return [(bigint >> 24) & 255, (bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+        }
+
+        function rgbaToHex(r, g, b, a = 255) {
+          const component = (c) => c.toString(16).padStart(2, "0");
+          if (a === 255) {
+            return "#" + component(r) + component(g) + component(b);
+          }
+          return "#" + component(r) + component(g) + component(b);
+        }
+
+        function nearestPalette(hex) {
+          const [r, g, b] = hexToRGBA(hex);
+          let best = paletteColors[0];
+          let bestDist = Infinity;
+          paletteColors.forEach((color) => {
+            const [cr, cg, cb] = hexToRGBA(color);
+            const dist = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+            if (dist < bestDist) {
+              bestDist = dist;
+              best = color;
+            }
+          });
+          return best;
+        }
+
+        function setTool(toolId) {
+          state.tool = toolId;
+          document.querySelectorAll(".icon-btn.tool").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.tool === toolId);
+          });
+          statusTool.textContent = `Tool: ${toolId[0].toUpperCase() + toolId.slice(1)}`;
+        }
+
+        function getCanvasCoords(evt) {
+          const rect = canvasRect = canvas.getBoundingClientRect();
+          const scaleX = rect.width / width;
+          const scaleY = rect.height / height;
+          const x = Math.floor((evt.clientX - rect.left) / scaleX);
+          const y = Math.floor((evt.clientY - rect.top) / scaleY);
+          return { x, y };
+        }
+
+        function bresenham(x0, y0, x1, y1, callback) {
+          const dx = Math.abs(x1 - x0);
+          const sx = x0 < x1 ? 1 : -1;
+          const dy = -Math.abs(y1 - y0);
+          const sy = y0 < y1 ? 1 : -1;
+          let err = dx + dy;
+          let x = x0;
+          let y = y0;
+          while (true) {
+            callback(x, y);
+            if (x === x1 && y === y1) break;
+            const e2 = 2 * err;
+            if (e2 >= dy) {
+              err += dy;
+              x += sx;
+            }
+            if (e2 <= dx) {
+              err += dx;
+              y += sy;
+            }
+          }
+        }
+
+        function fill(x, y, color) {
+          const target = getPixel(x, y);
+          if (target === color) return;
+          const queue = [[x, y]];
+          const visited = new Set();
+          while (queue.length) {
+            const [cx, cy] = queue.pop();
+            const key = `${cx},${cy}`;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            if (getPixel(cx, cy) !== target) continue;
+            setPixel(cx, cy, color);
+            if (cx > 0) queue.push([cx - 1, cy]);
+            if (cx < width - 1) queue.push([cx + 1, cy]);
+            if (cy > 0) queue.push([cx, cy - 1]);
+            if (cy < height - 1) queue.push([cx, cy + 1]);
+          }
+        }
+
+        function drawLinePixels(x0, y0, x1, y1, plot) {
+          bresenham(x0, y0, x1, y1, plot);
+        }
+
+        function drawRectPixels(x0, y0, x1, y1, plot) {
+          const xStart = Math.min(x0, x1);
+          const xEnd = Math.max(x0, x1);
+          const yStart = Math.min(y0, y1);
+          const yEnd = Math.max(y0, y1);
+          for (let y = yStart; y <= yEnd; y++) {
+            for (let x = xStart; x <= xEnd; x++) {
+              plot(x, y);
+            }
+          }
+        }
+
+        function drawCirclePixels(x0, y0, x1, y1, plot) {
+          const radius = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+          for (let y = -radius; y <= radius; y++) {
+            for (let x = -radius; x <= radius; x++) {
+              if (x * x + y * y <= radius * radius) {
+                plot(x0 + x, y0 + y);
+              }
+            }
+          }
+        }
+
+        function drawRect(x0, y0, x1, y1, color) {
+          drawRectPixels(x0, y0, x1, y1, (px, py) => setPixel(px, py, color));
+        }
+
+        function drawCircle(x0, y0, x1, y1, color) {
+          drawCirclePixels(x0, y0, x1, y1, (px, py) => setPixel(px, py, color));
+        }
+
+        function previewShape(tool, sx, sy, x, y) {
+          render();
+          ctx.save();
+          ctx.fillStyle = state.fg;
+          const plot = (px, py) => ctx.fillRect(px, py, 1, 1);
+          if (tool === "line") {
+            drawLinePixels(sx, sy, x, y, plot);
+          } else if (tool === "rect") {
+            drawRectPixels(sx, sy, x, y, plot);
+          } else if (tool === "circle") {
+            drawCirclePixels(sx, sy, x, y, plot);
+          }
+          ctx.restore();
+        }
+
+        function startSelection(x, y) {
+          state.selection = { startX: x, startY: y, endX: x, endY: y };
+          updateSelectionBox();
+        }
+
+        function updateSelection(x, y) {
+          if (!state.selection) return;
+          state.selection.endX = x;
+          state.selection.endY = y;
+          updateSelectionBox();
+        }
+
+        function endSelection() {
+          if (!state.selection) {
+            selectionBox.style.display = "none";
+            return;
+          }
+          updateSelectionBox();
+        }
+
+        function updateSelectionBox() {
+          if (!state.selection) {
+            selectionBox.style.display = "none";
+            return;
+          }
+          const rect = normalizeSelection();
+          if (!rect) return;
+          selectionBox.style.display = "block";
+          selectionBox.style.width = `${rect.w * state.zoom}px`;
+          selectionBox.style.height = `${rect.h * state.zoom}px`;
+          selectionBox.style.transform = `translate(${rect.x * state.zoom}px, ${
+            rect.y * state.zoom
+          }px)`;
+        }
+
+        function captureSelection() {
+          if (!state.selection) return null;
+          const rect = normalizeSelection();
+          if (!rect) return null;
+          const { x, y, w, h } = rect;
+          const pixels = [];
+          for (let row = 0; row < h; row++) {
+            const rowPixels = [];
+            for (let col = 0; col < w; col++) {
+              rowPixels.push(getPixel(x + col, y + row));
+            }
+            pixels.push(rowPixels);
+          }
+          return { ...rect, pixels };
+        }
+
+        function normalizeSelection() {
+          if (!state.selection) return null;
+          const { startX, startY, endX, endY } = state.selection;
+          const x = Math.max(0, Math.min(startX, endX));
+          const y = Math.max(0, Math.min(startY, endY));
+          const w = Math.min(width - x, Math.abs(endX - startX) + 1);
+          const h = Math.min(height - y, Math.abs(endY - startY) + 1);
+          return { x, y, w, h };
+        }
+
+        function applyClipboard(targetX, targetY) {
+          if (!state.clipboard) return;
+          const { pixels, w, h } = state.clipboard;
+          const maxW = Math.min(w, width - targetX);
+          const maxH = Math.min(h, height - targetY);
+          if (maxW <= 0 || maxH <= 0) return;
+          pushUndo();
+          for (let row = 0; row < maxH; row++) {
+            for (let col = 0; col < maxW; col++) {
+              setPixel(targetX + col, targetY + row, pixels[row][col]);
+            }
+          }
+          state.selection = {
+            startX: targetX,
+            startY: targetY,
+            endX: targetX + maxW - 1,
+            endY: targetY + maxH - 1,
+          };
+          updateSelectionBox();
+          render();
+        }
+
+        function flipClipboard(axis) {
+          if (!state.clipboard) return;
+          const { pixels, w, h } = state.clipboard;
+          const newPixels = [];
+          if (axis === "x") {
+            for (let row = 0; row < h; row++) {
+              newPixels[row] = [...pixels[row]].reverse();
+            }
+          } else {
+            for (let row = 0; row < h; row++) {
+              newPixels[row] = [...pixels[h - row - 1]];
+            }
+          }
+          state.clipboard = { ...state.clipboard, pixels: newPixels };
+        }
+
+        function rotateClipboard() {
+          if (!state.clipboard) return;
+          const { pixels, w, h } = state.clipboard;
+          const rotated = [];
+          for (let row = 0; row < w; row++) {
+            rotated[row] = [];
+            for (let col = 0; col < h; col++) {
+              rotated[row][col] = pixels[h - col - 1][row];
+            }
+          }
+          state.clipboard = { ...state.clipboard, pixels: rotated, w: h, h: w };
+        }
+
+        function clearCanvas() {
+          pushUndo();
+          state.grid.fill("#00000000");
+          state.selection = null;
+          selectionBox.style.display = "none";
+          render();
+        }
+
+        function toggleGrid() {
+          state.gridVisible = !state.gridVisible;
+          gridOverlay.classList.toggle("hidden", !state.gridVisible);
+        }
+
+        function updateZoom(value) {
+          state.zoom = value;
+          document.documentElement.style.setProperty("--zoom", value);
+          updateSelectionBox();
+          updateCanvasRect();
+        }
+
+        function handlePointerDown(e) {
+          e.preventDefault();
+          canvas.focus();
+          const { x, y } = getCanvasCoords(e);
+          if (x < 0 || y < 0 || x >= width || y >= height) return;
+          state.pointerDown = true;
+          state.startPoint = { x, y };
+          if (state.tool === "pencil") {
+            pushUndo();
+            setPixel(x, y, state.fg);
+            render();
+          } else if (state.tool === "eraser") {
+            pushUndo();
+            setPixel(x, y, "#00000000");
+            render();
+          } else if (state.tool === "fill") {
+            pushUndo();
+            fill(x, y, state.fg);
+            render();
+          } else if (state.tool === "select") {
+            startSelection(x, y);
+          } else if (state.tool === "eyedrop") {
+            const picked = getPixel(x, y);
+            state.fg = normalizeColor(picked && picked !== "#00000000" ? picked : "#000000");
+            fgInput.value = state.fg;
+            statusColor.textContent = `Color: ${state.fg}`;
+          }
+        }
+
+        function handlePointerMove(e) {
+          const coords = getCanvasCoords(e);
+          statusCoords.textContent = `Cursor: ${coords.x}, ${coords.y}`;
+          if (!state.pointerDown) return;
+          const { x, y } = coords;
+          if (x < 0 || y < 0 || x >= width || y >= height) return;
+          if (state.tool === "pencil") {
+            setPixel(x, y, state.fg);
+            render();
+          } else if (state.tool === "eraser") {
+            setPixel(x, y, "#00000000");
+            render();
+          } else if (state.tool === "line" || state.tool === "rect" || state.tool === "circle") {
+            const { x: sx, y: sy } = state.startPoint;
+            previewShape(state.tool, sx, sy, x, y);
+          } else if (state.tool === "select") {
+            updateSelection(x, y);
+          }
+        }
+
+        function handlePointerUp(e) {
+          if (!state.pointerDown) return;
+          state.pointerDown = false;
+          const { x, y } = getCanvasCoords(e);
+          if (state.tool === "line") {
+            pushUndo();
+            bresenham(state.startPoint.x, state.startPoint.y, x, y, (px, py) => setPixel(px, py, state.fg));
+            render();
+          } else if (state.tool === "rect") {
+            pushUndo();
+            drawRect(state.startPoint.x, state.startPoint.y, x, y, state.fg);
+            render();
+          } else if (state.tool === "circle") {
+            pushUndo();
+            drawCircle(state.startPoint.x, state.startPoint.y, x, y, state.fg);
+            render();
+          } else if (state.tool === "select") {
+            endSelection();
+          }
+        }
+
+        function buildPalette() {
+          paletteColors.forEach((color, index) => {
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = "swatch";
+            swatch.style.background = color;
+            swatch.setAttribute("aria-label", `Palette color ${index + 1}`);
+            swatch.addEventListener("click", () => {
+              state.fg = normalizeColor(color);
+              fgInput.value = state.fg;
+              statusColor.textContent = `Color: ${state.fg}`;
+            });
+            paletteEl.appendChild(swatch);
+          });
+        }
+
+        function buildTools() {
+          toolList.forEach((tool) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "icon-btn tool";
+            btn.dataset.tool = tool.id;
+            btn.textContent = tool.label;
+            btn.setAttribute("aria-label", `${tool.label} (key ${tool.key})`);
+            btn.tabIndex = 0;
+            btn.addEventListener("click", () => setTool(tool.id));
+            toolButtonsEl.appendChild(btn);
+          });
+          setTool("pencil");
+        }
+
+        function exportPNG() {
+          const off = document.createElement("canvas");
+          off.width = width;
+          off.height = height;
+          const offCtx = off.getContext("2d");
+          offCtx.imageSmoothingEnabled = false;
+          render();
+          offCtx.drawImage(canvas, 0, 0);
+          const link = document.createElement("a");
+          link.href = off.toDataURL("image/png");
+          link.download = "pixel.png";
+          link.click();
+        }
+
+        function exportSheet() {
+          const pngCanvas = document.createElement("canvas");
+          pngCanvas.width = width;
+          pngCanvas.height = height;
+          const pngCtx = pngCanvas.getContext("2d");
+          pngCtx.imageSmoothingEnabled = false;
+          render();
+          pngCtx.drawImage(canvas, 0, 0);
+          const pngData = pngCanvas.toDataURL("image/png");
+          const json = JSON.stringify({
+            width,
+            height,
+            pixels: state.grid,
+          });
+          const files = [
+            { name: "sprite.png", data: pngData },
+            { name: "sprite.json", data: "data:application/json;base64," + btoa(json) },
+          ];
+          files.forEach((file) => {
+            const link = document.createElement("a");
+            link.href = file.data;
+            link.download = file.name;
+            link.click();
+          });
+        }
+
+        function importPNG(file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              const tempCanvas = document.createElement("canvas");
+              tempCanvas.width = width;
+              tempCanvas.height = height;
+              const tCtx = tempCanvas.getContext("2d");
+              tCtx.drawImage(img, 0, 0, width, height);
+              const data = tCtx.getImageData(0, 0, width, height).data;
+              pushUndo();
+              for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                  const idx = (y * width + x) * 4;
+                  const alpha = data[idx + 3];
+                  if (alpha <= 10) {
+                    setPixel(x, y, "#00000000");
+                  } else {
+                    const color = rgbaToHex(data[idx], data[idx + 1], data[idx + 2], alpha);
+                    setPixel(x, y, nearestPalette(color));
+                  }
+                }
+              }
+              render();
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+
+        function saveToLocal() {
+          const payload = {
+            grid: state.grid,
+            fg: state.fg,
+            bg: state.bg,
+          };
+          localStorage.setItem("pixel-save", JSON.stringify(payload));
+        }
+
+        function loadFromLocal() {
+          const data = localStorage.getItem("pixel-save");
+          if (!data) return;
+          try {
+            const parsed = JSON.parse(data);
+            state.grid = parsed.grid || state.grid;
+            state.fg = normalizeColor(parsed.fg || state.fg);
+            state.bg = normalizeColor(parsed.bg || state.bg);
+            fgInput.value = state.fg;
+            bgInput.value = state.bg;
+            statusColor.textContent = `Color: ${state.fg}`;
+            render();
+          } catch (err) {
+            console.error(err);
+          }
+        }
+
+        function swapColors() {
+          const temp = state.fg;
+          state.fg = normalizeColor(state.bg);
+          state.bg = normalizeColor(temp);
+          fgInput.value = state.fg;
+          bgInput.value = state.bg;
+          statusColor.textContent = `Color: ${state.fg}`;
+        }
+
+        function setupDragWindow() {
+          const windowEl = document.getElementById("window");
+          const titleBar = document.getElementById("titleBar");
+          let offsetX = 0;
+          let offsetY = 0;
+          let dragging = false;
+          titleBar.addEventListener("pointerdown", (e) => {
+            dragging = true;
+            offsetX = e.clientX - windowEl.offsetLeft;
+            offsetY = e.clientY - windowEl.offsetTop;
+            windowEl.setPointerCapture(e.pointerId);
+          });
+          titleBar.addEventListener("pointermove", (e) => {
+            if (!dragging) return;
+            windowEl.style.position = "absolute";
+            windowEl.style.left = `${e.clientX - offsetX}px`;
+            windowEl.style.top = `${e.clientY - offsetY}px`;
+          });
+          titleBar.addEventListener("pointerup", (e) => {
+            dragging = false;
+            windowEl.releasePointerCapture(e.pointerId);
+          });
+        }
+
+        canvas.addEventListener("pointerdown", handlePointerDown);
+        canvas.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUp);
+
+        fgInput.addEventListener("input", (e) => {
+          state.fg = normalizeColor(e.target.value);
+          fgInput.value = state.fg;
+          statusColor.textContent = `Color: ${state.fg}`;
+        });
+        bgInput.addEventListener("input", (e) => {
+          state.bg = normalizeColor(e.target.value);
+          bgInput.value = state.bg;
+        });
+        zoomSlider.addEventListener("input", (e) => {
+          updateZoom(Number(e.target.value));
+        });
+        copyBtn.addEventListener("click", () => {
+          state.clipboard = captureSelection();
+        });
+        pasteBtn.addEventListener("click", () => {
+          if (!state.clipboard) return;
+          if (!state.selection) {
+            state.selection = { startX: 0, startY: 0, endX: 0, endY: 0 };
+          }
+          const rect = normalizeSelection();
+          if (!rect) return;
+          applyClipboard(rect.x, rect.y);
+        });
+        flipXBtn.addEventListener("click", () => {
+          const target = captureSelection();
+          if (!target) return;
+          state.clipboard = target;
+          flipClipboard("x");
+          applyClipboard(target.x, target.y);
+        });
+        flipYBtn.addEventListener("click", () => {
+          const target = captureSelection();
+          if (!target) return;
+          state.clipboard = target;
+          flipClipboard("y");
+          applyClipboard(target.x, target.y);
+        });
+        rotateBtn.addEventListener("click", () => {
+          const target = captureSelection();
+          if (!target) return;
+          state.clipboard = target;
+          rotateClipboard();
+          applyClipboard(target.x, target.y);
+        });
+        clearBtn.addEventListener("click", clearCanvas);
+        undoBtn.addEventListener("click", () => {
+          if (!state.undoStack.length) return;
+          state.redoStack.push([...state.grid]);
+          const previous = state.undoStack.pop();
+          restoreGrid(previous);
+        });
+        redoBtn.addEventListener("click", () => {
+          if (!state.redoStack.length) return;
+          state.undoStack.push([...state.grid]);
+          const next = state.redoStack.pop();
+          restoreGrid(next);
+        });
+        gridBtn.addEventListener("click", toggleGrid);
+        importInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (file) importPNG(file);
+          e.target.value = "";
+        });
+        exportPngBtn.addEventListener("click", exportPNG);
+        exportSheetBtn.addEventListener("click", exportSheet);
+        saveBtn.addEventListener("click", saveToLocal);
+        loadBtn.addEventListener("click", loadFromLocal);
+        eyedropBtn.addEventListener("click", () => setTool("eyedrop"));
+        swapBtn.addEventListener("click", swapColors);
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "+" || e.key === "=") {
+            e.preventDefault();
+            updateZoom(Math.min(24, state.zoom + 1));
+            zoomSlider.value = state.zoom;
+          } else if (e.key === "-") {
+            e.preventDefault();
+            updateZoom(Math.max(6, state.zoom - 1));
+            zoomSlider.value = state.zoom;
+          } else if (e.ctrlKey && e.key === "z") {
+            e.preventDefault();
+            undoBtn.click();
+          } else if ((e.ctrlKey && e.key === "y") || (e.ctrlKey && e.shiftKey && e.key === "Z")) {
+            e.preventDefault();
+            redoBtn.click();
+          } else if (e.ctrlKey && e.key === "c") {
+            e.preventDefault();
+            state.clipboard = captureSelection();
+          } else if (e.ctrlKey && e.key === "v") {
+            e.preventDefault();
+            pasteBtn.click();
+          } else {
+            const tool = toolList.find((t) => t.key === e.key);
+            if (tool) {
+              e.preventDefault();
+              setTool(tool.id);
+            }
+          }
+        });
+
+        buildPalette();
+        buildTools();
+        render();
+        updateZoom(state.zoom);
+       	setupDragWindow();
+      })();
+    </script>
+  </body>
+</html>

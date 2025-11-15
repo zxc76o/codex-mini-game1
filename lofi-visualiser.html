@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Context7 Lo-Fi Visualiser</title>
+    <style>
+      :root {
+        --desk: #1b1638;
+        --chrome: #c3c3c3;
+        --chrome-dark: #8a8a8a;
+        --chrome-light: #e9e9e9;
+        --text: #1c1c1c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 20%, #2b1b52, #0b071a 70%);
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        color: #111;
+      }
+
+      .desktop {
+        width: min(1200px, 96vw);
+      }
+
+      .window {
+        border: 3px solid var(--chrome-dark);
+        border-right-color: var(--chrome-light);
+        border-bottom-color: var(--chrome-light);
+        background: var(--chrome);
+        box-shadow: 0 25px 60px rgba(6, 4, 14, 0.65);
+      }
+
+      .title-bar {
+        background: linear-gradient(90deg, #0a42c4, #4f74db);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0.25rem 0.4rem;
+        font-size: 0.95rem;
+      }
+
+      .title-bar strong {
+        font-weight: 600;
+      }
+
+      .title-bar-buttons {
+        display: flex;
+        gap: 0.2rem;
+        margin-right: 0.4rem;
+      }
+
+      .pixel-btn {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #030303;
+        background: linear-gradient(var(--chrome-light), var(--chrome));
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: #000;
+        cursor: pointer;
+      }
+
+      .title-label {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        letter-spacing: 0.08em;
+      }
+
+      .title-label span {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.4rem;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.2);
+        text-transform: uppercase;
+      }
+
+      .window-body {
+        padding: 1rem;
+        background: linear-gradient(180deg, #d7d7d7, #b8b8b8);
+      }
+
+      .visual-panel {
+        border: 2px solid var(--chrome-dark);
+        background: #03030a;
+        padding: 1rem;
+        border-radius: 10px;
+        position: relative;
+      }
+
+      canvas {
+        width: 100%;
+        height: clamp(280px, 40vw, 420px);
+        display: block;
+        border: 3px solid #201b44;
+        border-radius: 14px;
+        background: #050713;
+      }
+
+      .canvas-overlay {
+        position: absolute;
+        right: 30px;
+        top: 24px;
+        color: rgba(255, 255, 255, 0.6);
+        font-family: "Space Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.4em;
+        font-size: 0.75rem;
+      }
+
+      .controls-grid {
+        margin-top: 1rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      .control-card {
+        border: 2px solid var(--chrome-dark);
+        background: #efefef;
+        padding: 0.9rem;
+        border-radius: 8px;
+        box-shadow: inset -3px -3px 0 rgba(255, 255, 255, 0.5), inset 3px 3px 0 rgba(0, 0, 0, 0.15);
+      }
+
+      .control-card h3 {
+        margin: 0 0 0.4rem;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.6rem;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: #6f5ef7;
+      }
+
+      select,
+      input[type="color"] {
+        padding: 0.25rem;
+        border: 1px solid var(--chrome-dark);
+        font-size: 0.9rem;
+        background: #fff;
+        border-radius: 4px;
+      }
+
+      .hue-wheel {
+        width: 100%;
+        height: 150px;
+        border: 2px dashed var(--chrome-dark);
+        border-radius: 50%;
+        background: conic-gradient(
+          from 0deg,
+          #f00,
+          #ff0,
+          #0f0,
+          #0ff,
+          #00f,
+          #f0f,
+          #f00
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hue-wheel input[type="color"] {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        border: none;
+        padding: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.6rem;
+      }
+
+      .btn {
+        padding: 0.5rem 1rem;
+        border: 2px solid #111;
+        background: linear-gradient(#fdfdfd, #c8c8c8);
+        font-size: 0.85rem;
+        cursor: pointer;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .btn.primary {
+        background: linear-gradient(#ff6ec7, #b34bff);
+        color: #fff;
+      }
+
+      .footer {
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #303030;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="desktop">
+      <div class="window">
+        <div class="title-bar">
+          <div class="title-bar-buttons">
+            <div class="pixel-btn">_</div>
+            <div class="pixel-btn">□</div>
+            <div class="pixel-btn">X</div>
+          </div>
+          <div class="title-label">
+            <strong>Lo-Fi Visualiser.exe</strong>
+          </div>
+        </div>
+        <div class="window-body">
+          <div id="app"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      const hexToRgb = (hex) => {
+        const clean = hex.replace("#", "");
+        const bigint = parseInt(clean, 16);
+        const r = (bigint >> 16) & 255;
+        const g = (bigint >> 8) & 255;
+        const b = bigint & 255;
+        return { r, g, b };
+      };
+
+      const VisualiserApp = () => {
+        const canvasRef = useRef(null);
+        const animationRef = useRef(null);
+        const analyserRef = useRef(null);
+        const audioCtxRef = useRef(null);
+        const nodesRef = useRef([]);
+        const dataArrayRef = useRef(new Uint8Array(128));
+        const optionsRef = useRef({});
+        const noiseBufferRef = useRef(null);
+
+        const [mode, setMode] = useState("bars");
+        const [speed, setSpeed] = useState(1.1);
+        const [density, setDensity] = useState(0.65);
+        const [glow, setGlow] = useState(0.7);
+        const [hue, setHue] = useState("#bd6bff");
+        const [playing, setPlaying] = useState(false);
+        const [audioReady, setAudioReady] = useState(false);
+
+        useEffect(() => {
+          optionsRef.current = { mode, speed, density, glow, hue, rgb: hexToRgb(hue) };
+        }, [mode, speed, density, glow, hue]);
+
+        const ensureAudio = () => {
+          if (!audioCtxRef.current) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioCtx();
+            const master = ctx.createGain();
+            master.gain.value = 0.18;
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 512;
+            master.connect(analyser);
+            analyser.connect(ctx.destination);
+            audioCtxRef.current = { ctx, master };
+            analyserRef.current = analyser;
+            setAudioReady(true);
+          }
+          if (audioCtxRef.current?.ctx.state === "suspended") {
+            audioCtxRef.current.ctx.resume();
+          }
+          return audioCtxRef.current;
+        };
+
+        const stopAudio = () => {
+          nodesRef.current.forEach((src) => {
+            try {
+              src.stop(0);
+            } catch (_) {}
+          });
+          nodesRef.current = [];
+          setPlaying(false);
+        };
+
+        const startTone = () => {
+          const { ctx, master } = ensureAudio();
+          const now = ctx.currentTime;
+          const oscillators = [];
+
+          const createOsc = (type, freq, gainValue, detune = 0) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            osc.detune.value = detune;
+            gain.gain.value = gainValue;
+            osc.connect(gain).connect(master);
+            osc.start();
+            nodesRef.current.push(osc);
+            oscillators.push(osc);
+            return osc;
+          };
+
+          // vapor pad chords
+          createOsc("sine", 110, 0.25, -5);
+          createOsc("triangle", 185, 0.15, 18);
+          createOsc("sine", 220 * 1.26, 0.12, -18);
+
+          // gentle noise wash
+          const buffer =
+            noiseBufferRef.current ?? (() => {
+              const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+              const data = noiseBuf.getChannelData(0);
+              for (let i = 0; i < data.length; i++) {
+                data[i] = Math.random() * 2 - 1;
+              }
+              noiseBufferRef.current = noiseBuf;
+              return noiseBuf;
+            })();
+          const noise = ctx.createBufferSource();
+          noise.buffer = buffer;
+          noise.loop = true;
+          const filter = ctx.createBiquadFilter();
+          filter.type = "lowpass";
+          filter.frequency.value = 1200;
+          const gain = ctx.createGain();
+          gain.gain.value = 0.08;
+          noise.connect(filter).connect(gain).connect(master);
+          noise.start();
+          nodesRef.current.push(noise);
+
+          // LFO wobble
+          if (oscillators.length) {
+            const target = oscillators[0];
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.frequency.value = 0.08;
+            lfoGain.gain.value = 35;
+            lfo.connect(lfoGain).connect(target.detune);
+            lfo.start();
+            nodesRef.current.push(lfo);
+          }
+
+          setPlaying(true);
+        };
+
+        const toggleAudio = () => {
+          if (playing) {
+            stopAudio();
+          } else {
+            startTone();
+          }
+        };
+
+        useEffect(() => {
+          const canvas = canvasRef.current;
+          const ctx = canvas.getContext("2d");
+          const setSize = () => {
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = canvas.clientWidth * ratio;
+            canvas.height = canvas.clientHeight * ratio;
+            ctx.scale(ratio, ratio);
+          };
+          setSize();
+          window.addEventListener("resize", setSize);
+
+          const render = (time) => {
+            const opts = optionsRef.current;
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.save();
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = "rgba(5, 5, 18, 0.9)";
+            ctx.fillRect(0, 0, width, height);
+
+            const rgb = opts.rgb || hexToRgb(opts.hue || "#bd6bff");
+            const overlayGrad = ctx.createLinearGradient(0, 0, width, height);
+            overlayGrad.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
+            overlayGrad.addColorStop(1, "rgba(0, 0, 0, 0.35)");
+            ctx.fillStyle = overlayGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            let data = dataArrayRef.current;
+            if (analyserRef.current) {
+              analyserRef.current.getByteFrequencyData(data);
+            } else {
+              for (let i = 0; i < data.length; i++) {
+                const vibe =
+                  (Math.sin(time / 1800 + i * 0.14) + Math.cos(time / 2400 + i * 0.05)) * 0.5 +
+                  0.5;
+                data[i] = Math.floor(vibe * 255);
+              }
+            }
+
+            const glowSize = 20 + opts.glow * 120;
+            ctx.shadowBlur = glowSize;
+            ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`;
+            ctx.lineWidth = 2;
+
+            const count = Math.max(16, Math.floor(data.length * (0.3 + opts.density * 0.7)));
+            if (opts.mode === "bars") {
+              const barWidth = width / count;
+              for (let i = 0; i < count; i++) {
+                const value = data[i % data.length] / 255;
+                const barHeight = (height * 0.6) * value + 20;
+                const x = i * barWidth;
+                const y = height / 2 - barHeight / 2;
+                const radius = 6;
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.3 + value * 0.7})`;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + barWidth - radius, y);
+                ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
+                ctx.lineTo(x + barWidth, y + barHeight - radius);
+                ctx.quadraticCurveTo(
+                  x + barWidth,
+                  y + barHeight,
+                  x + barWidth - radius,
+                  y + barHeight
+                );
+                ctx.lineTo(x + radius, y + barHeight);
+                ctx.quadraticCurveTo(x, y + barHeight, x, y + barHeight - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                ctx.fill();
+              }
+            } else if (opts.mode === "dots") {
+              const spacing = (width / count) * (1.1 - opts.density * 0.5);
+              for (let i = 0; i < count; i++) {
+                const value = data[(i * 3) % data.length] / 255;
+                const radius = 4 + value * 18;
+                const angle = (time / 2500) * opts.speed + i * 0.2;
+                const orbit = (height * 0.25) + value * 80;
+                const centerX = width / 2 + Math.cos(angle) * orbit;
+                const centerY = height / 2 + Math.sin(angle * 1.1) * orbit * 0.6;
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.4 + value * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            } else if (opts.mode === "grid") {
+              const step = 30 - opts.density * 10;
+              for (let x = 0; x < width; x += step) {
+                for (let y = 0; y < height; y += step) {
+                  const index = Math.floor((x + y + time * opts.speed * 0.05) % data.length);
+                  const value = data[index] / 255;
+                  ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.2 + value * 0.6})`;
+                  const size = step * (0.3 + value * 0.5);
+                  ctx.strokeRect(x, y, size, size);
+                }
+              }
+            }
+
+            ctx.restore();
+            animationRef.current = requestAnimationFrame(render);
+          };
+          animationRef.current = requestAnimationFrame(render);
+          return () => {
+            window.removeEventListener("resize", setSize);
+            cancelAnimationFrame(animationRef.current);
+          };
+        }, []);
+
+        useEffect(() => () => stopAudio(), []);
+
+        return (
+          <div>
+            <div className="visual-panel">
+              <canvas ref={canvasRef}></canvas>
+            </div>
+            <div className="controls-grid">
+              <div className="control-card">
+                <h3>Visualizer Mode</h3>
+                <label>
+                  Style
+                  <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                    <option value="bars">Chromatic Bars</option>
+                    <option value="dots">Orbiting Dots</option>
+                    <option value="grid">Pulse Grid</option>
+                  </select>
+                </label>
+                <label>
+                  Speed
+                  <input
+                    type="range"
+                    min="0.4"
+                    max="3"
+                    step="0.1"
+                    value={speed}
+                    onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                  />
+                </label>
+                <label>
+                  Density
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="1"
+                    step="0.05"
+                    value={density}
+                    onChange={(e) => setDensity(parseFloat(e.target.value))}
+                  />
+                </label>
+                <label>
+                  Glow
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={glow}
+                    onChange={(e) => setGlow(parseFloat(e.target.value))}
+                  />
+                </label>
+              </div>
+              <div className="control-card">
+                <h3>Hue Wheel</h3>
+                <div className="hue-wheel">
+                  <input
+                    type="color"
+                    aria-label="Hue"
+                    value={hue}
+                    onChange={(e) => setHue(e.target.value)}
+                  />
+                </div>
+                <p style={{ fontSize: "0.8rem", marginTop: "0.6rem" }}>
+                  Pick a tint to recolor the entire scene. Vapor gradients react instantly.
+                </p>
+              </div>
+              <div className="control-card">
+                <h3>Transport</h3>
+                <p style={{ fontSize: "0.85rem", marginBottom: "0.6rem" }}>
+                  A bundled ambient tone powers the analyzer so you can groove without local
+                  uploads. Tap once to unlock audio.
+                </p>
+                <div className="actions">
+                  <button className="btn primary" onClick={toggleAudio}>
+                    {playing ? "Stop Vapor Tone" : "Start Vapor Tone"}
+                  </button>
+                  <button className="btn" onClick={() => setMode("bars")}>
+                    Bars
+                  </button>
+                  <button className="btn" onClick={() => setMode("dots")}>
+                    Dots
+                  </button>
+                  <button className="btn" onClick={() => setMode("grid")}>
+                    Grid
+                  </button>
+                </div>
+                <small style={{ display: "block", marginTop: "0.6rem", color: "#5c5c5c" }}>
+                  Audio ready: {audioReady ? "yes" : "tap to arm"}
+                </small>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("app"));
+      root.render(<VisualiserApp />);
+    </script>
+  </body>
+</html>

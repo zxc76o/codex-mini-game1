@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>迷你街机 · 在线游戏平台</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #060818;
+        --panel: rgba(255, 255, 255, 0.06);
+        --text: #f4f6fb;
+        --text-muted: #9aa4cf;
+        --accent: #7dd3fc;
+        --accent-2: #c084fc;
+        --border: rgba(255, 255, 255, 0.08);
+        font-family: "Inter", "HarmonyOS Sans", "PingFang SC", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #0f1730, #04060f 70%);
+        color: var(--text);
+      }
+
+      header {
+        padding: clamp(1.5rem, 5vw, 3rem);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3.5rem);
+      }
+
+      header p {
+        margin: 0;
+        color: var(--text-muted);
+        max-width: 540px;
+      }
+
+      .controls {
+        margin-left: auto;
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+      }
+
+      .search {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.65rem 1.1rem;
+        color: var(--text);
+        min-width: 230px;
+      }
+
+      main {
+        padding: 0 clamp(1.5rem, 5vw, 3rem) 3rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 1.2rem;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.35rem;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .tag {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.7rem;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        color: var(--text-muted);
+      }
+
+      .actions {
+        margin-top: auto;
+        display: flex;
+        gap: 0.6rem;
+      }
+
+      button {
+        font-family: inherit;
+        border: none;
+        cursor: pointer;
+        padding: 0.65rem 1rem;
+        border-radius: 14px;
+        font-weight: 600;
+        color: #04060f;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+        flex: 1;
+        transition: transform 0.15s ease;
+      }
+
+      button.secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+      }
+
+      button:active {
+        transform: translateY(2px);
+      }
+
+      .empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: var(--text-muted);
+        padding: 3rem 1rem;
+        border: 1px dashed var(--border);
+        border-radius: 22px;
+      }
+
+      .player-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(3, 5, 12, 0.92);
+        display: none;
+        flex-direction: column;
+        z-index: 30;
+      }
+
+      .player-overlay.active {
+        display: flex;
+      }
+
+      .player-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .player-header h3 {
+        margin: 0;
+      }
+
+      .player-frame {
+        flex: 1;
+        border: none;
+        width: 100%;
+        background: #050710;
+      }
+
+      .close-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text);
+        width: auto;
+        padding-inline: 1.2rem;
+      }
+
+      .status-bar {
+        padding: 0.6rem 1.5rem;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      @media (max-width: 600px) {
+        .controls {
+          width: 100%;
+          margin-left: 0;
+        }
+        .search {
+          width: 100%;
+        }
+        .actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="player-overlay" id="player">
+      <div class="player-header">
+        <div>
+          <h3 id="player-title">正在加载...</h3>
+          <small id="player-info" style="color: var(--text-muted)"></small>
+        </div>
+        <button class="close-btn" id="close-player">关闭</button>
+      </div>
+      <iframe class="player-frame" id="player-frame" title="Game Player"></iframe>
+      <div class="status-bar" id="player-status">准备中...</div>
+    </div>
+
+    <header>
+      <div>
+        <h1>迷你街机</h1>
+        <p>集中管理所有 HTML 小游戏，一键运行、分享或扩展。向列表增加新条目即可上架到 GitHub Pages。</p>
+      </div>
+      <div class="controls">
+        <input class="search" id="search" type="search" placeholder="搜索游戏 / 标签" />
+      </div>
+    </header>
+
+    <main>
+      <div class="grid" id="grid"></div>
+    </main>
+
+    <script>
+      const games = [
+        {
+          id: "jumping-ball-runner",
+          title: "Jumping Ball Runner",
+          description: "节奏向的无尽奔跑，飞跃障碍追逐高分。",
+          tags: ["平台", "街机"],
+          file: "jumping-ball-runner.html",
+        },
+        {
+          id: "lofi-visualiser",
+          title: "Lo-Fi Visualiser",
+          description: "可交互的音乐可视化仪表盘，内置氛围音。",
+          tags: ["可视化", "音乐"],
+          file: "lofi-visualiser.html",
+        },
+        {
+          id: "mario-kart",
+          title: "Mini Kart Dash",
+          description: "三车道漂移闪避香蕉，冲刺最佳成绩。",
+          tags: ["竞速", "动作"],
+          file: "mario-kart.html",
+        },
+        {
+          id: "retro-pixel-painter",
+          title: "Retro Pixel Painter",
+          description: "像素画创作工具，支持选区、撤销与导出。",
+          tags: ["工具", "像素"],
+          file: "retro-pixel-painter.html",
+        },
+        {
+          id: "typing-speed-race",
+          title: "Typing Speed Race",
+          description: "限时打字比赛，记录历史成绩曲线。",
+          tags: ["文字", "挑战"],
+          file: "typing-speed-race.html",
+        },
+        {
+          id: "virtual-drum-kit",
+          title: "Virtual Drum Kit",
+          description: "十二键虚拟鼓垫，可录制和回放节奏。",
+          tags: ["音乐", "节奏"],
+          file: "virtual-drum-kit.html",
+        },
+      ];
+
+      const grid = document.getElementById("grid");
+      const searchInput = document.getElementById("search");
+      const playerOverlay = document.getElementById("player");
+      const playerFrame = document.getElementById("player-frame");
+      const playerTitle = document.getElementById("player-title");
+      const playerInfo = document.getElementById("player-info");
+      const playerStatus = document.getElementById("player-status");
+      const closePlayerBtn = document.getElementById("close-player");
+
+      function createCard(game) {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <div>
+            <h2>${game.title}</h2>
+            <p style="color: var(--text-muted); margin:0">${game.description}</p>
+          </div>
+          <div class="meta">
+            ${game.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
+          </div>
+          <div class="actions">
+            <button data-action="play">运行</button>
+            <button class="secondary" data-action="open">新标签</button>
+          </div>
+        `;
+        card.querySelector("[data-action=play]").addEventListener("click", () => openPlayer(game));
+        card.querySelector("[data-action=open]").addEventListener("click", () => {
+          window.open(game.file, "_blank", "noopener");
+        });
+        return card;
+      }
+
+      function renderGrid(keyword = "") {
+        const term = keyword.trim().toLowerCase();
+        const list = term
+          ? games.filter((game) => {
+              return (
+                game.title.toLowerCase().includes(term) ||
+                game.description.toLowerCase().includes(term) ||
+                game.tags.some((tag) => tag.toLowerCase().includes(term))
+              );
+            })
+          : games;
+
+        grid.innerHTML = "";
+        if (!list.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "没有匹配的游戏，尝试其他关键词。";
+          grid.appendChild(empty);
+          return;
+        }
+        list.forEach((game) => grid.appendChild(createCard(game)));
+      }
+
+      function openPlayer(game) {
+        playerTitle.textContent = game.title;
+        playerInfo.textContent = `${game.tags.join(" · ")} · ${game.file}`;
+        playerStatus.textContent = "正在加载...";
+        playerFrame.src = game.file;
+        playerFrame.onload = () => (playerStatus.textContent = "加载完成，祝你玩得开心！");
+        playerOverlay.classList.add("active");
+      }
+
+      function closePlayer() {
+        playerFrame.src = "about:blank";
+        playerOverlay.classList.remove("active");
+      }
+
+      searchInput.addEventListener("input", (e) => renderGrid(e.target.value));
+      closePlayerBtn.addEventListener("click", closePlayer);
+      playerOverlay.addEventListener("click", (e) => {
+        if (e.target === playerOverlay) closePlayer();
+      });
+
+      renderGrid();
+    </script>
+  </body>
+</html>
